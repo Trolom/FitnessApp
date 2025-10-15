@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import '../template.dart';
 
 
@@ -41,3 +42,30 @@ final mockTemplates = <Template>[
     ExerciseBlock(name: 'Hanging Leg Raise', sets: 3, reps: 12),
   ]),
 ];
+
+
+// Colors for muscle groups (used by calendar and pie chart)
+const Map<String, Color> muscleColors = {
+  'Chest': Color(0xFFE57373),
+  'Back': Color(0xFF64B5F6),
+  'Legs': Color(0xFF81C784),
+  'Shoulders': Color(0xFFFFB74D),
+  'Arms': Color(0xFFBA68C8),
+  'Core': Color(0xFFFF8A65),
+};
+
+
+// Dummy per-day muscle work (volume units) for the calendar
+// key: DateTime(y,m,d) -> map of muscle group -> volume
+final Map<DateTime, Map<String, int>> dayMuscleWork = {
+  _d(2025, 10, 10): {'Chest': 12, 'Shoulders': 8, 'Arms': 6},
+  _d(2025, 10, 11): {'Back': 16, 'Arms': 10, 'Core': 6},
+  _d(2025, 10, 12): {'Legs': 24, 'Core': 8},
+  _d(2025, 10, 13): {'Chest': 10, 'Back': 10},
+  _d(2025, 10, 14): {'Core': 12},
+  _d(2025, 10, 15): {'Shoulders': 14, 'Arms': 8},
+  _d(2025, 10, 16): {'Legs': 20},
+};
+
+
+DateTime _d(int y, int m, int d) => DateTime(y, m, d);
