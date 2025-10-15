@@ -1,4 +1,4 @@
-package com.example.fitness_project
+package com.dragos.fittrack_mock
 
 import io.flutter.embedding.android.FlutterActivity
 
