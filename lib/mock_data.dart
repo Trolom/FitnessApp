@@ -69,3 +69,33 @@ final Map<DateTime, Map<String, int>> dayMuscleWork = {
 
 
 DateTime _d(int y, int m, int d) => DateTime(y, m, d);
+class MockExercise {
+  final String name;       // e.g., "Push-ups"
+  final String category;   // "Cardio" | "Strength" | "Core"
+  final String muscles;    // short text like "Chest • Triceps • Core"
+  final int sets;          // e.g., 4
+  final int count;         // reps or seconds
+  final String unit;       // 'reps' or 'sec'
+
+  const MockExercise(
+    this.name,
+    this.category,
+    this.muscles,
+    this.sets,
+    this.count, {
+    this.unit = 'reps',
+  });
+}
+
+const List<MockExercise> mockExercises = [
+  MockExercise('Push-ups', 'Strength', 'Chest • Triceps • Core', 4, 12),
+  MockExercise('Squats', 'Strength', 'Quads • Glutes • Core', 4, 10),
+  MockExercise('Plank', 'Core', 'Abs • Lower back', 3, 45, unit: 'sec'),
+  MockExercise('Jumping Jacks', 'Cardio', 'Full body warm-up', 3, 60, unit: 'sec'),
+  MockExercise('Burpees', 'Cardio', 'Full body conditioning', 4, 12),
+  MockExercise('Lunges', 'Strength', 'Quads • Glutes • Balance', 3, 12),
+  MockExercise('Mountain Climbers', 'Cardio', 'Core • Shoulders', 3, 40, unit: 'sec'),
+  MockExercise('Bicycle Crunch', 'Core', 'Abs • Obliques', 3, 20),
+  MockExercise('Russian Twist', 'Core', 'Obliques • Core', 3, 30, unit: 'sec'),
+  MockExercise('High Knees', 'Cardio', 'Legs • Conditioning', 3, 45, unit: 'sec'),
+];
