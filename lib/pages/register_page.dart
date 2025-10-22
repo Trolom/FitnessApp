@@ -1,4 +1,3 @@
-// lib/pages/auth/register_page.dart
 import 'package:flutter/material.dart';
 import '../../widgets/auth_text_field.dart';
 import '../../widgets/validators.dart';

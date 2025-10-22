@@ -1,4 +1,3 @@
-// lib/app.dart
 import 'package:flutter/material.dart';
 import 'pages/home_page.dart';
 import 'pages/exercises_page.dart';
