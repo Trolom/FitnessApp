@@ -4,7 +4,7 @@ import '../mock_data.dart';
 // to create like a design plan for this page
 // we specify here that our page is going to be statefull
 class ExercisesPage extends StatefulWidget {
-  //this line is for saying that key could be passed if needed
+  // this line is for saying that key could be passed if needed
   // if we have 2 identical exercises page, this will be needed
   const ExercisesPage({super.key});
 
@@ -15,19 +15,24 @@ class ExercisesPage extends StatefulWidget {
 }
 
 class _ExercisesPageState extends State<ExercisesPage> {
-  // a controller to read/listen to the text from the search bar
+  // a controller to hold and manage the text type into TextField
   final _searchCtrl = TextEditingController();
 
   final List<String> _categories = const ['All', 'Cardio', 'Strength', 'Core'];
   String _selectedCat = 'All';
 
 
+// when the widget is removed from the screen, this dispose() method is called
+// we first clean up our custom controller to stop listeners and free memory,
+// then call super.dispose() so Flutter can finish its own cleanup.
   @override
   void dispose() {
     _searchCtrl.dispose();
     super.dispose();
   }
 
+// a gettter to get the list from the mocked_data, which can be used as a variable
+// to filter based on the input and chosen categorie
   List<MockExercise> get _filtered {
     final q = _searchCtrl.text.trim().toLowerCase();
     return mockExercises.where((e) {
@@ -38,6 +43,7 @@ class _ExercisesPageState extends State<ExercisesPage> {
       return matchesCat && matchesQuery;
     }).toList();
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -96,7 +102,7 @@ class _ExercisesPageState extends State<ExercisesPage> {
         ],
       ),
 
-      // Mocked action for M1
+      // Mocked action
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
 

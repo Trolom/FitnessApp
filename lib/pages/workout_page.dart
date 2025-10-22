@@ -181,14 +181,23 @@ class _WorkoutPageState extends State<WorkoutPage> {
                   }),
 
                   const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
-                      onPressed: () => setState(() => ex.sets.add(WorkoutSet())),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add set'),
-                    ),
-                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextButton.icon
+                        (onPressed: () => setState(() => ex.sets.add(WorkoutSet())),
+                        icon:const Icon(Icons.add),
+                        label: const Text("Add set")
+                        ),
+                      TextButton.icon(
+                        onPressed: () => setState(() {
+                          if (ex.sets.isNotEmpty) ex.sets.removeLast();
+                        }),
+                        icon: const Icon(Icons.remove),
+                        label: const Text("Remove set")
+                      )
+                    ],
+                  )
                 ],
               ),
             ),

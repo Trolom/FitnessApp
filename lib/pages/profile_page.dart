@@ -54,11 +54,11 @@ class ProfilePage extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: const [
-              _StatCard(label: 'Height', value: '178 cm'),
+              _StatCard(label: 'Height', value: '$heightCm cm'),
               SizedBox(width: 12),
-              _StatCard(label: 'Weight', value: '78.2 kg'),
+              _StatCard(label: 'Weight', value: '$weightKg kg'),
               SizedBox(width: 12),
-              _StatCard(label: 'Target kcal', value: '2400'),
+              _StatCard(label: 'Target kcal', value: '$kcalTarget'),
             ],
           ),
 
@@ -162,7 +162,6 @@ class _Tile extends StatelessWidget {
     this.subtitle,
     this.trailing,
     this.onTap,
-    super.key,
   });
 
   @override
@@ -180,49 +179,6 @@ class _Tile extends StatelessWidget {
         subtitle: subtitle != null ? Text(subtitle!) : null,
         trailing: trailing,
         onTap: onTap,
-      ),
-    );
-  }
-}
-
-class _SwitchTile extends StatefulWidget {
-  final IconData icon;
-  final String title;
-  final bool initial;
-  final ValueChanged<bool> onChanged;
-
-  const _SwitchTile({
-    required this.icon,
-    required this.title,
-    required this.initial,
-    required this.onChanged,
-    super.key,
-  });
-
-  @override
-  State<_SwitchTile> createState() => _SwitchTileState();
-}
-
-class _SwitchTileState extends State<_SwitchTile> {
-  late bool value = widget.initial;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: SwitchListTile(
-        value: value,
-        onChanged: (v) {
-          setState(() => value = v);
-          widget.onChanged(v);
-        },
-        title: Text(widget.title),
-        secondary: Icon(widget.icon),
       ),
     );
   }

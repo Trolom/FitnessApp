@@ -12,7 +12,7 @@ class HistoryPage extends StatelessWidget {
         setsDesc: '4 × Deadlift • 4 × Row',
         bestSet: '150 kg × 3',
         durationMin: 55,
-        totalKg: 5600,
+        totalKg: 560,
       ),
       _WorkoutLog(
         title: 'Push Day (Hypertrophy)',
@@ -20,7 +20,7 @@ class HistoryPage extends StatelessWidget {
         setsDesc: '4 × Bench • 3 × Fly',
         bestSet: '70 kg × 8',
         durationMin: 54,
-        totalKg: 7200,
+        totalKg: 720,
       ),
       _WorkoutLog(
         title: 'Legs + Core',
@@ -28,7 +28,7 @@ class HistoryPage extends StatelessWidget {
         setsDesc: '5 × Squat • 3 × RDL',
         bestSet: '110 kg × 5',
         durationMin: 63,
-        totalKg: 8950,
+        totalKg: 895,
       ),
     ];
 
@@ -199,7 +199,7 @@ class _HistoryCard extends StatelessWidget {
                   alignRight: true,
                   child: Text(
                     w.bestSet,
-                    textAlign: TextAlign.end,
+                    textAlign: TextAlign.center,
                     style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                   ),
                 ),
@@ -255,15 +255,15 @@ class _LabeledBlock extends StatelessWidget {
   }
 }
 
-// --- simple data models ---
+//simple data models 
 
 class _WorkoutLog {
   final String title;
   final DateTime when;
-  final String setsDesc;   // e.g., "5 × Squat (Barbell)"
-  final String bestSet;    // e.g., "110 kg × 5"
-  final int durationMin;   // minutes
-  final int totalKg;       // total lifted (arbitrary)
+  final String setsDesc;
+  final String bestSet;
+  final int durationMin;
+  final int totalKg; 
   const _WorkoutLog({
     required this.title,
     required this.when,
