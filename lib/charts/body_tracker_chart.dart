@@ -15,7 +15,7 @@ class BodyTrackerChart extends StatelessWidget {
     return LineChart(
       LineChartData(
         titlesData: const FlTitlesData(
-          leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 36)),
+          leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 40)),
           bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true)),
           rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
           topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),

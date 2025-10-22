@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'template.dart';
+import '../pages/workout_page.dart';
 
 
 class TemplateCard extends StatelessWidget {
@@ -21,9 +22,15 @@ class TemplateCard extends StatelessWidget {
                   child: Text(template.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                 ),
                 FilledButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => WorkoutPage(template: template),
+                      ),
+                    );
+                  },
                   child: const Text('Use'),
-                )
+                ),
               ],
             ),
             const SizedBox(height: 8),
