@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "394195813408",
+    "project_id": "fittness-app-f0f18",
+    "storage_bucket": "fittness-app-f0f18.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:394195813408:android:9a62b028bd22f107eae845",
+        "android_client_info": {
+          "package_name": "com.dragos.fittrack_mock"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDaCal1Q8Ar-8bf3P4n50GwOE24VHbpPdI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

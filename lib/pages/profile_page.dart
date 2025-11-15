@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // some made up user data
-    const name = 'fitnessAppUser';
-    const email = 'my@email.com';
+    final user = FirebaseAuth.instance.currentUser;
+
+    final displayName = user?.displayName ?? 'User';
+    final email = user?.email ?? 'No email';
+
+    // Temporary dummy values — later you can store/retrieve from Firestore
     const heightCm = 178;
     const weightKg = 78.2;
     const weeklyGoal = '4 workouts / week';
@@ -20,6 +24,7 @@ class ProfilePage extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () {
+              // TODO: open edit profile page
             },
           ),
         ],
@@ -39,9 +44,18 @@ class ProfilePage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                    Text(
+                      displayName,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text(email, style: const TextStyle(fontSize: 13)),
+                    Text(
+                      email,
+                      style: const TextStyle(fontSize: 13),
+                    ),
                   ],
                 ),
               ),
@@ -66,30 +80,30 @@ class ProfilePage extends StatelessWidget {
           const Divider(),
 
           const SizedBox(height: 12),
-          const Text('Goals', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          const Text('Goals',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
           _Tile(
             icon: Icons.flag,
             title: 'Weekly workouts',
             subtitle: weeklyGoal,
             trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-            },
+            onTap: () {},
           ),
           _Tile(
             icon: Icons.local_fire_department,
             title: 'Daily calories',
             subtitle: '$kcalTarget kcal',
             trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-            },
+            onTap: () {},
           ),
 
           const SizedBox(height: 16),
           const Divider(),
 
           const SizedBox(height: 12),
-          const Text('Account & Data', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          const Text('Account & Data',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
 
           _Tile(
@@ -98,6 +112,7 @@ class ProfilePage extends StatelessWidget {
             subtitle: 'Manage your sign-in',
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
+              // TODO: implement change password
             },
           ),
           _Tile(
@@ -106,12 +121,19 @@ class ProfilePage extends StatelessWidget {
             subtitle: 'Remove account and all data',
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
+              // TODO: implement account deletion
             },
           ),
 
           const SizedBox(height: 24),
+
+          // LOGOUT BUTTON
           FilledButton.icon(
-            onPressed: () {
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              if (context.mounted) {
+                Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
+              }
             },
             icon: const Icon(Icons.logout),
             label: const Text('Log out'),

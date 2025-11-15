@@ -1,5 +1,8 @@
 plugins {
     id("com.android.application")
+    // START: FlutterFire Configuration
+    id("com.google.gms.google-services")
+    // END: FlutterFire Configuration
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -25,16 +28,6 @@ android {
         versionName = flutter.versionName
     }
 
-    buildTypes {
-        debug {
-            // Kotlin DSL uses '=' instead of Groovy method-call style
-            applicationIdSuffix = ".dev"
-            versionNameSuffix = "-dev"
-        }
-        release {
-            signingConfig = signingConfigs.getByName("debug")
-        }
-    }
 }
 
 flutter {
