@@ -51,7 +51,7 @@ class _RegisterPageState extends State<RegisterPage> {
           ?.updateDisplayName(_name.text.trim());
 
       if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/home');
+        Navigator.of(context).pushReplacementNamed('/onboarding');
       }
     } on FirebaseAuthException catch (e) {
       setState(() => _error = e.message ?? 'Registration failed');

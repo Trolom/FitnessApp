@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'template.dart';
-import '../pages/workout_page.dart';
+import '../../pages/workout_page.dart';
 
 
 class TemplateCard extends StatelessWidget {

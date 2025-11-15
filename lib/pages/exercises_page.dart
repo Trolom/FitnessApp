@@ -1,121 +1,193 @@
 import 'package:flutter/material.dart';
-import '../mock_data.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-// to create like a design plan for this page
-// we specify here that our page is going to be statefull
+import '../widgets/exercise.dart';          // Exercise model
+import '../content.dart';        // baseExercises
+import '../widgets/exercise_service.dart'; // Firestore access
+
 class ExercisesPage extends StatefulWidget {
-  // this line is for saying that key could be passed if needed
-  // if we have 2 identical exercises page, this will be needed
   const ExercisesPage({super.key});
 
-  //we tell to create a helper object that will tell to manage
-  // the changable states in a seperate object
   @override
   State<ExercisesPage> createState() => _ExercisesPageState();
 }
 
 class _ExercisesPageState extends State<ExercisesPage> {
-  // a controller to hold and manage the text type into TextField
   final _searchCtrl = TextEditingController();
 
-  final List<String> _categories = const ['All', 'Cardio', 'Strength', 'Core'];
-  String _selectedCat = 'All';
-
-
-// when the widget is removed from the screen, this dispose() method is called
-// we first clean up our custom controller to stop listeners and free memory,
-// then call super.dispose() so Flutter can finish its own cleanup.
   @override
   void dispose() {
     _searchCtrl.dispose();
     super.dispose();
   }
 
-// a gettter to get the list from the mocked_data, which can be used as a variable
-// to filter based on the input and chosen categorie
-  List<MockExercise> get _filtered {
-    final q = _searchCtrl.text.trim().toLowerCase();
-    return mockExercises.where((e) {
-      final matchesCat = _selectedCat == 'All' || e.category == _selectedCat;
-      final matchesQuery = q.isEmpty ||
-          e.name.toLowerCase().contains(q) ||
-          e.muscles.toLowerCase().contains(q);
-      return matchesCat && matchesQuery;
-    }).toList();
+  /// Merge base exercises + user exercises after both streams resolve
+  Stream<List<Exercise>> _allExercisesStream() {
+    return ExerciseService.userExercisesStream().map((userList) {
+      return [
+        ...baseExercises,
+        ...userList,
+      ];
+    });
   }
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Exercises')),
-      body: Column(
-        children: [
-          // Search box
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: TextField(
-              controller: _searchCtrl,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                hintText: 'Search exercises (e.g. push, core)',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                isDense: true,
-              ),
-            ),
-          ),
 
-          // Category chips
-          SizedBox(
-            height: 44,
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              scrollDirection: Axis.horizontal,
-              itemCount: _categories.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (_, i) {
-                final cat = _categories[i];
-                final selected = cat == _selectedCat;
-                return ChoiceChip(
-                  label: Text(cat),
-                  selected: selected,
-                  onSelected: (_) => setState(() => _selectedCat = cat),
-                );
-              },
-            ),
-          ),
+      body: StreamBuilder<List<Exercise>>(
+        stream: _allExercisesStream(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-          const SizedBox(height: 8),
+          final all = snapshot.data!;
+          final query = _searchCtrl.text.trim().toLowerCase();
 
-          // Results
-          Expanded(
-            child: _filtered.isEmpty
-                ? _EmptyState()
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                    itemCount: _filtered.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (_, i) => _ExerciseTile(ex: _filtered[i]),
+          final filtered = all.where((ex) {
+            return query.isEmpty ||
+                ex.name.toLowerCase().contains(query) ||
+                ex.muscles.toLowerCase().contains(query);
+          }).toList();
+
+          return Column(
+            children: [
+              // SEARCH FIELD
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: TextField(
+                  controller: _searchCtrl,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    hintText: 'Search exercises (e.g. push, chest)',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    isDense: true,
                   ),
-          ),
-        ],
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              Expanded(
+                child: filtered.isEmpty
+                    ? const _EmptyState()
+                    : ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                        itemCount: filtered.length,
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: 8),
+                        itemBuilder: (_, i) =>
+                            _ExerciseTile(ex: filtered[i]),
+                      ),
+              ),
+            ],
+          );
+        },
       ),
 
-      // Mocked action
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-
-        },
+        onPressed: _openAddDialog,
         icon: const Icon(Icons.add),
         label: const Text('Add'),
       ),
     );
   }
+
+  // ---------------- ADD CUSTOM EXERCISE ----------------
+
+  void _openAddDialog() {
+    final nameCtrl = TextEditingController();
+    final musclesCtrl = TextEditingController();
+    final setsCtrl = TextEditingController();
+    final repsCtrl = TextEditingController();
+
+    String unit = 'reps';
+
+    showDialog(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          title: const Text('Add Custom Exercise'),
+          content: SingleChildScrollView(
+            child: Column(
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: 'Name'),
+                ),
+                TextField(
+                  controller: musclesCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Muscles (e.g. Chest • Triceps • Core)',
+                  ),
+                ),
+                TextField(
+                  controller: setsCtrl,
+                  decoration: const InputDecoration(labelText: 'Sets'),
+                  keyboardType: TextInputType.number,
+                ),
+                TextField(
+                  controller: repsCtrl,
+                  decoration: const InputDecoration(labelText: 'Reps / Seconds'),
+                  keyboardType: TextInputType.number,
+                ),
+
+                const SizedBox(height: 10),
+
+                DropdownButton<String>(
+                  value: unit,
+                  items: const [
+                    DropdownMenuItem(
+                        value: 'reps', child: Text('Reps')),
+                    DropdownMenuItem(
+                        value: 'sec', child: Text('Seconds')),
+                  ],
+                  onChanged: (v) => setState(() => unit = v!),
+                ),
+              ],
+            ),
+          ),
+
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+
+            FilledButton(
+              child: const Text('Save'),
+              onPressed: () async {
+                final ex = Exercise(
+                  name: nameCtrl.text.trim(),
+                  muscles: musclesCtrl.text.trim(),
+                  sets: int.tryParse(setsCtrl.text) ?? 0,
+                  reps: int.tryParse(repsCtrl.text) ?? 0,
+                  unit: unit,
+                  isCustom: true,
+                );
+
+                await ExerciseService.addCustomExercise(ex);
+
+                if (mounted) Navigator.pop(context);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
 
+// -------------------------- UI COMPONENTS --------------------------
+
 class _ExerciseTile extends StatelessWidget {
-  final MockExercise ex;
+  final Exercise ex;
   const _ExerciseTile({required this.ex});
 
   @override
@@ -129,91 +201,97 @@ class _ExerciseTile extends StatelessWidget {
       ),
       child: ListTile(
         leading: CircleAvatar(
-          child: Text(ex.name.isNotEmpty ? ex.name.substring(0, 1) : '?'),
+          child: Text(ex.name[0]),
         ),
-        title: Text(ex.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text('${ex.category} • ${ex.muscles}'),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
+
+        title: Row(
           children: [
-            Text(
-              ex.unit == 'sec' ? '${ex.count} ${ex.unit}' : '${ex.sets}×${ex.count}',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 2),
-            Text(ex.unit == 'sec' ? 'Hold' : 'Sets×Reps', style: const TextStyle(fontSize: 12)),
+            Text(ex.name,
+                style: const TextStyle(fontWeight: FontWeight.w600)),
+            if (ex.isCustom) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: scheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  "Custom",
+                  style: TextStyle(fontSize: 10),
+                ),
+              )
+            ],
           ],
         ),
-        onTap: () {
-          showModalBottomSheet(
-            context: context,
-            showDragHandle: true,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-            ),
-            builder: (_) => Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(ex.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 6),
-                  Text('${ex.category} • ${ex.muscles}'),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      _Pill(text: ex.unit == 'sec' ? '${ex.count} ${ex.unit}' : '${ex.sets}×${ex.count}'),
-                      const SizedBox(width: 8),
-                      const _Pill(text: 'Bodyweight'),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'How to:\nKeep core tight, control movement, and breathe steadily.',
-                  ),
-                  const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Added ${ex.name}')),
-                      );
-                    },
-                    icon: const Icon(Icons.add_task),
-                    label: const Text('Add to today'),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
+
+        subtitle: Text(ex.muscles),
+
+        trailing: Text(
+          ex.unit == 'sec'
+              ? '${ex.reps} sec'
+              : '${ex.sets}×${ex.reps}',
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+
+        onTap: () => _openDetails(context),
       ),
     );
   }
-}
 
-class _Pill extends StatelessWidget {
-  final String text;
-  const _Pill({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: scheme.outlineVariant),
+  void _openDetails(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      child: Text(text),
+
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(ex.name,
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+
+            const SizedBox(height: 6),
+            Text(ex.muscles),
+
+            const SizedBox(height: 12),
+            Text(
+              ex.unit == 'sec'
+                  ? '${ex.reps} seconds'
+                  : '${ex.sets} sets × ${ex.reps} reps',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+
+            const SizedBox(height: 16),
+
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('${ex.name} added to workout')),
+                );
+              },
+              icon: const Icon(Icons.add),
+              label: const Text("Add to today"),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
 class _EmptyState extends StatelessWidget {
+  const _EmptyState();
+
   @override
   Widget build(BuildContext context) {
     return const Center(
@@ -224,7 +302,7 @@ class _EmptyState extends StatelessWidget {
           children: [
             Icon(Icons.search_off, size: 48),
             SizedBox(height: 8),
-            Text('No exercises match your filters.'),
+            Text("No exercises found."),
           ],
         ),
       ),

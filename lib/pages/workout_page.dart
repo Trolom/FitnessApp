@@ -1,7 +1,7 @@
 // lib/pages/workout_page.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../template.dart';
+import '../widgets/template.dart';
 
 class WorkoutSet {
   double? kg;

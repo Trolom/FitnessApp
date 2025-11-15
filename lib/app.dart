@@ -6,6 +6,7 @@ import 'pages/calendar_page.dart';
 import 'pages/profile_page.dart';
 import 'pages/login_page.dart';
 import 'pages/register_page.dart';
+import 'pages/onboarding_page.dart';
 
 class FitApp extends StatelessWidget {
   const FitApp({super.key});
@@ -24,6 +25,7 @@ class FitApp extends StatelessWidget {
         '/login': (_) => const LoginPage(),
         '/register': (_) => const RegisterPage(),
         '/home': (_) => const RootShell(),
+        '/onboarding': (_) => const OnboardingPage(),
       },
     );
   }

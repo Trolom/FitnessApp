@@ -1,10 +1,12 @@
-// lib/pages/home_page.dart
 import 'package:flutter/material.dart';
+import '../../widgets/template_card.dart';
+import '../../widgets/template.dart';
+import '../../widgets/base_templates.dart';
+import '../../widgets/template_service.dart';
+import 'create_template_page.dart';
 import '../../charts/calories_chart.dart';
 import '../../charts/muscle_groups_chart.dart';
 import '../../charts/body_tracker_chart.dart';
-import '../../template_card.dart';
-import '../../mock_data.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -19,21 +21,23 @@ class HomePage extends StatelessWidget {
             snap: true,
             title: const Text('Dashboard'),
           ),
+
           SliverPadding(
             padding: const EdgeInsets.all(16),
             sliver: SliverList(
               delegate: SliverChildListDelegate(
                 [
+
+                  // ----- CHARTS -----
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: const [
-                          Text(
-                            'Calories (last 7 days)',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                          ),
+                          Text('Calories (last 7 days)',
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w600)),
                           SizedBox(height: 12),
                           SizedBox(height: 180, child: CaloriesChart()),
                         ],
@@ -41,49 +45,114 @@ class HomePage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
+
                   Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: const [
-                                Text(
-                                  'Muscle Groups',
-                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                                ),
-                                SizedBox(height: 12),
-                                SizedBox(height: 180, child: MuscleGroupsChart()),
-                              ],
-                            ),
-                          ),
-                        ),
-                  Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: const [
-                                Text(
-                                  'Body Tracker',
-                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                                ),
-                                SizedBox(height: 12),
-                                SizedBox(height: 180, child: BodyTrackerChart()),
-                              ],
-                            ),
-                          ),
-                        ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text('Muscle Groups',
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w600)),
+                          SizedBox(height: 12),
+                          SizedBox(height: 180, child: MuscleGroupsChart()),
+                        ],
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 12),
+
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text('Body Tracker',
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w600)),
+                          SizedBox(height: 12),
+                          SizedBox(height: 180, child: BodyTrackerChart()),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // ----- TEMPLATES HEADER -----
                   const Text(
                     'Available Templates',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 8),
-                  ...mockTemplates.map(
-                        (t) => Padding(
+
+                  // CREATE BUTTON
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const CreateTemplatePage(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('Create Template'),
+                    ),
+                  ),
+
+                  // ----- BASE TEMPLATES -----
+                  ...baseTemplates.map(
+                    (t) => Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: TemplateCard(template: t),
                     ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // ----- USER TEMPLATES -----
+                  StreamBuilder<List<Template>>(
+                    stream: TemplateService.userTemplates(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(20),
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      }
+
+                      final userTemplates = snapshot.data!;
+                      if (userTemplates.isEmpty) {
+                        return const SizedBox();
+                      }
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Your Templates',
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 8),
+
+                          ...userTemplates.map(
+                            (t) => Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: TemplateCard(template: t),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),
