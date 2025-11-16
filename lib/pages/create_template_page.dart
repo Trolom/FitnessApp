@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../widgets/template.dart';
-import '../widgets/template_service.dart';
+import '../misc/template.dart';
+import '../misc/template_service.dart';
 import '../content.dart';
-import '../widgets/exercise_block.dart';
+import '../misc/exercise_block.dart';
 
 class CreateTemplatePage extends StatefulWidget {
   const CreateTemplatePage({super.key});
@@ -95,12 +95,24 @@ class _CreateTemplatePageState extends State<CreateTemplatePage> {
           title: Text(ex.name),
           subtitle: Text(ex.muscles),
           onTap: () {
+            // Convert "Chest • Triceps • Core" → ['Chest','Triceps','Core']
+            final muscleList = ex.muscles
+                .split(' • ')
+                .map((m) => m.trim())
+                .where((m) => m.isNotEmpty)
+                .toList();
+
             setState(() {
               _blocks.add(
                 ExerciseBlock(
-                    name: ex.name, sets: ex.sets, reps: ex.reps),
+                  name: ex.name,
+                  sets: ex.sets,
+                  reps: ex.reps,
+                  muscles: muscleList,   // ← NEW
+                ),
               );
             });
+
             Navigator.pop(context);
           },
         );

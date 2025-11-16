@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../widgets/template_card.dart';
-import '../../widgets/template.dart';
-import '../../widgets/base_templates.dart';
-import '../../widgets/template_service.dart';
+import '../misc/template_card.dart';
+import '../misc/template.dart';
+import '../content.dart';
+import '../misc/template_service.dart';
 import 'create_template_page.dart';
 import '../../charts/calories_chart.dart';
 import '../../charts/muscle_groups_chart.dart';

@@ -12,3 +12,9 @@ Future<void> main() async {
     
     runApp(const FitApp());
 }
+
+
+// Remove add to today button when pressing an exercise
+// make custom exercise be available in templates
+// make muscle type be a drop down with specific options
+// solve graphs

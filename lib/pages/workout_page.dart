@@ -1,7 +1,9 @@
 // lib/pages/workout_page.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../widgets/template.dart';
+import '../misc/template.dart';
+import '../misc/workout_service.dart';
+import '../misc/workout_log.dart';
 
 class WorkoutSet {
   double? kg;
@@ -28,6 +30,56 @@ class _WorkoutPageState extends State<WorkoutPage> {
   late List<WorkoutExercise> _items;
   late Stopwatch _stopwatch;
   Timer? _ticker;
+
+  int _calculateTotalKg() {
+    int total = 0;
+    for (var ex in _items) {
+      for (var s in ex.sets) {
+        if (s.kg != null && s.reps != null) {
+          total += (s.kg! * s.reps!).round();
+        }
+      }
+    }
+    return total;
+  }
+
+  String _findBestSet() {
+    double best = 0;
+    String desc = "-";
+
+    for (var ex in _items) {
+      for (var s in ex.sets) {
+        if (s.kg != null && s.reps != null) {
+          final volume = s.kg! * s.reps!;
+          if (volume > best) {
+            best = volume;
+            desc = "${s.kg!.toStringAsFixed(0)} kg × ${s.reps}";
+          }
+        }
+      }
+    }
+    return desc;
+  }
+
+  String _shortSummary() {
+    return _items
+        .map((e) => "${e.sets.length} × ${e.name}")
+        .take(3)
+        .join(" • ");
+  }
+
+  List<String> _collectMuscles() {
+    final muscles = <String>{}; // use Set to avoid duplicates
+
+    for (final block in widget.template.exercises) {
+      for (final m in block.muscles) {
+        muscles.add(m);
+      }
+    }
+
+    return muscles.toList();
+  }
+
 
   @override
   void initState() {
@@ -206,16 +258,34 @@ class _WorkoutPageState extends State<WorkoutPage> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Workout saved (stub).')),
-          );
-          await Future.delayed(const Duration(seconds: 2));
+          final totalKg = _calculateTotalKg();
+          final bestSet = _findBestSet();
+          final setsDesc = _shortSummary();
+          final duration = _stopwatch.elapsed.inSeconds;
 
+          final muscles = _collectMuscles();   // NEW
+
+          final log = WorkoutLog(
+            title: widget.template.name,
+            when: DateTime.now(),
+            durationSec: duration,
+            totalKg: totalKg,
+            bestSet: bestSet,
+            setsDesc: setsDesc,
+            muscles: muscles,                  // NEW
+          );
+
+          await WorkoutService.saveWorkout(log);
+
+          if (!mounted) return;
           Navigator.of(context).pop();
+
+          ScaffoldMessenger.of(context)
+              .showSnackBar(const SnackBar(content: Text("Workout saved!")));
         },
         icon: const Icon(Icons.save),
         label: const Text('Save'),
-      ),
+      )
     );
   }
 }

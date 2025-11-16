@@ -1,6 +1,8 @@
-import '../widgets/exercise.dart';
-import '../widgets/template.dart';
-import '../widgets/exercise_block.dart';
+import 'package:flutter/material.dart';
+import 'misc/exercise.dart';
+import 'misc/template.dart';
+import 'misc/exercise_block.dart';
+
 
 const List<Exercise> baseExercises = [
 
@@ -47,29 +49,141 @@ const List<Template> baseTemplates = [
   Template(
     name: 'Push Day (Hypertrophy)',
     exercises: [
-      ExerciseBlock(name: 'Flat Bench Press', sets: 4, reps: 8),
-      ExerciseBlock(name: 'Incline DB Press', sets: 3, reps: 10),
-      ExerciseBlock(name: 'Dip (Assisted)', sets: 3, reps: 8),
-      ExerciseBlock(name: 'Cable Fly', sets: 3, reps: 12),
-      ExerciseBlock(name: 'Triceps Rope Pushdown', sets: 3, reps: 12),
+      ExerciseBlock(
+        name: 'Flat Bench Press',
+        sets: 4,
+        reps: 8,
+        muscles: ['Chest', 'Shoulders', 'Triceps'],
+      ),
+      ExerciseBlock(
+        name: 'Incline DB Press',
+        sets: 3,
+        reps: 10,
+        muscles: ['Chest', 'Shoulders', 'Triceps'],
+      ),
+      ExerciseBlock(
+        name: 'Dip (Assisted)',
+        sets: 3,
+        reps: 8,
+        muscles: ['Chest', 'Triceps', 'Shoulders'],
+      ),
+      ExerciseBlock(
+        name: 'Cable Fly',
+        sets: 3,
+        reps: 12,
+        muscles: ['Chest'],
+      ),
+      ExerciseBlock(
+        name: 'Triceps Rope Pushdown',
+        sets: 3,
+        reps: 12,
+        muscles: ['Triceps'],
+      ),
     ],
   ),
+
   Template(
     name: 'Pull Day (Strength)',
     exercises: [
-      ExerciseBlock(name: 'Deadlift', sets: 5, reps: 3),
-      ExerciseBlock(name: 'Pull-ups', sets: 4, reps: 6),
-      ExerciseBlock(name: 'Barbell Row', sets: 4, reps: 5),
-      ExerciseBlock(name: 'Face Pull', sets: 3, reps: 12),
+      ExerciseBlock(
+        name: 'Deadlift',
+        sets: 5,
+        reps: 3,
+        muscles: ['Hamstrings', 'Glutes', 'Lower back'],
+      ),
+      ExerciseBlock(
+        name: 'Pull-ups',
+        sets: 4,
+        reps: 6,
+        muscles: ['Back', 'Biceps', 'Shoulders'],
+      ),
+      ExerciseBlock(
+        name: 'Barbell Row',
+        sets: 4,
+        reps: 5,
+        muscles: ['Back', 'Biceps'],
+      ),
+      ExerciseBlock(
+        name: 'Face Pull',
+        sets: 3,
+        reps: 12,
+        muscles: ['Shoulders', 'Upper back', 'Rear delts'],
+      ),
     ],
   ),
+
   Template(
     name: 'Legs + Core',
     exercises: [
-      ExerciseBlock(name: 'Back Squat', sets: 5, reps: 5),
-      ExerciseBlock(name: 'Romanian Deadlift', sets: 4, reps: 8),
-      ExerciseBlock(name: 'Leg Press', sets: 3, reps: 12),
-      ExerciseBlock(name: 'Hanging Leg Raise', sets: 3, reps: 12),
+      ExerciseBlock(
+        name: 'Back Squat',
+        sets: 5,
+        reps: 5,
+        muscles: ['Quads', 'Glutes', 'Core'],
+      ),
+      ExerciseBlock(
+        name: 'Romanian Deadlift',
+        sets: 4,
+        reps: 8,
+        muscles: ['Hamstrings', 'Glutes', 'Lower back'],
+      ),
+      ExerciseBlock(
+        name: 'Leg Press',
+        sets: 3,
+        reps: 12,
+        muscles: ['Quads', 'Glutes'],
+      ),
+      ExerciseBlock(
+        name: 'Hanging Leg Raise',
+        sets: 3,
+        reps: 12,
+        muscles: ['Lower abs', 'Core', 'Hip flexors'],
+      ),
     ],
   ),
 ];
+
+
+
+const Map<String, Color> muscleColors = {
+  'Chest': Color(0xFFE57373),
+  'Back': Color(0xFF64B5F6),
+  'Legs': Color(0xFF81C784),
+  'Shoulders': Color(0xFFFFB74D),
+  'Arms': Color(0xFFBA68C8),
+  'Core': Color(0xFFFF8A65),
+};
+
+const Map<String, String> muscleToGroup = {
+  // Chest
+  'Chest': 'Chest',
+
+  // Back
+  'Back': 'Back',
+  'Lower back': 'Back',
+  'Lats': 'Back',
+
+  // Legs
+  'Legs': 'Legs',
+  'Quads': 'Legs',
+  'Hamstrings': 'Legs',
+  'Glutes': 'Legs',
+  'Calves': 'Legs',
+
+  // Shoulders
+  'Shoulders': 'Shoulders',
+  'Delts': 'Shoulders',
+
+  // Arms
+  'Arms': 'Arms',
+  'Biceps': 'Arms',
+  'Triceps': 'Arms',
+  'Forearms': 'Arms',
+
+  // Core
+  'Core': 'Core',
+  'Abs': 'Core',
+  'Obliques': 'Core',
+  'Lower abs': 'Core',
+  'Hip flexors': 'Core',
+};

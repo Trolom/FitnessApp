@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../widgets/exercise.dart';          // Exercise model
+import '../misc/exercise.dart';          // Exercise model
 import '../content.dart';        // baseExercises
-import '../widgets/exercise_service.dart'; // Firestore access
+import '../misc/exercise_service.dart'; // Firestore access
 
 class ExercisesPage extends StatefulWidget {
   const ExercisesPage({super.key});
