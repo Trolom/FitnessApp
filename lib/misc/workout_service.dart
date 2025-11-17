@@ -50,6 +50,21 @@ class WorkoutService {
       return result;
     });
   }
+
+  static Stream<Map<String, int>> totalMuscleVolumeStream() {
+    return muscleWorkByDayStream().map((dayMap) {
+      final totals = <String, int>{};
+
+      for (final dayEntry in dayMap.values) {
+        for (final muscleEntry in dayEntry.entries) {
+          totals[muscleEntry.key] =
+              (totals[muscleEntry.key] ?? 0) + muscleEntry.value;
+        }
+      }
+
+      return totals;
+    });
+  }
 }
 
   
