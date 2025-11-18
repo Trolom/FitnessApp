@@ -5,18 +5,40 @@ import '../content.dart';                // baseExercises
 import '../misc/exercise_service.dart';  // Firestore access
 
 // for the dropdown menu options when choosing for custom exercises
+// NEW: broader muscle list
 const kMuscleOptions = <String>[
+  // Upper body – pushing
   'Chest',
+  'Upper Chest',
+  'Lower Chest',
+  'Front Delts',
+  'Side Delts',
+  'Rear Delts',
+  'Triceps',
+  // Upper body – pulling
   'Back',
-  'Legs',
-  'Shoulders',
-  'Arms',
+  'Lats',
+  'Upper Back',
+  'Mid Back',
+  'Lower Back',
+  'Traps',
+  'Rhomboids',
+  'Biceps',
+  'Forearms',
+  // Core & hips
   'Core',
+  'Abs',
+  'Obliques',
+  'Hip Flexors',
+  'Adductors (Inner Thigh)',
+  'Abductors (Outer Thigh)',
+  // Lower body
   'Glutes',
   'Quads',
   'Hamstrings',
   'Calves',
 ];
+
 
 class ExercisesPage extends StatefulWidget {
   const ExercisesPage({super.key});
@@ -119,8 +141,7 @@ class _ExercisesPageState extends State<ExercisesPage> {
     final repsCtrl = TextEditingController();
 
     String unit = 'reps';
-    String selectedMuscle = kMuscleOptions.first; // default dropdown selection
-
+    final Set<String> selectedMuscles = { kMuscleOptions.first }; // for beter dropdown menu
     showDialog(
       context: context,
       builder: (_) {
@@ -136,15 +157,92 @@ class _ExercisesPageState extends State<ExercisesPage> {
                       decoration: const InputDecoration(labelText: 'Name'),
                     ),
 
-                    //replaced the text input with a dropdown menu for the muscle group
-                    DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: 'Muscle group'),
-                      initialValue: selectedMuscle,
-                      items: kMuscleOptions
-                          .map((m) => DropdownMenuItem(value: m, child: Text(m)))
-                          .toList(),
-                      onChanged: (v) => setLocalState(() => selectedMuscle = v!), //to only render the dialog and not the whole page when updated
+                    //replaced the text input with a a better dropdown menu for the muscle group
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
+                        child: Text('Muscle groups', style: Theme.of(context).textTheme.bodyMedium),
+                      ),
                     ),
+                    InkWell(
+                      onTap: () async {
+                        // open a checkbox dialog and update local state with the result
+                        final result = await showDialog<Set<String>>(
+                          context: context,
+                          builder: (ctx) {
+                            // local copy for interactive ticking inside the dialog
+                            final temp = Set<String>.from(selectedMuscles);
+                            return StatefulBuilder(
+                              builder: (ctx, setSB) {
+                                return AlertDialog(
+                                  title: const Text('Select muscle groups'),
+                                  content: SizedBox(
+                                    width: double.maxFinite,
+                                    child: ListView(
+                                      shrinkWrap: true,
+                                      children: [
+                                        for (final m in kMuscleOptions)
+                                          CheckboxListTile(
+                                            title: Text(m),
+                                            value: temp.contains(m),
+                                            onChanged: (checked) {
+                                              setSB(() {
+                                                if (checked == true) {
+                                                  temp.add(m);
+                                                } else {
+                                                  temp.remove(m);
+                                                }
+                                              });
+                                            },
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx), // cancel
+                                      child: const Text('Cancel'),
+                                    ),
+                                    FilledButton(
+                                      onPressed: () {
+                                        // ensure at least one is selected
+                                        if (temp.isEmpty) temp.add(kMuscleOptions.first);
+                                        Navigator.pop(ctx, temp);
+                                      },
+                                      child: const Text('Done'),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                        );
+
+                        if (result != null) {
+                          setLocalState(() {
+                            selectedMuscles
+                              ..clear()
+                              ..addAll(result);
+                          });
+                        }
+                      },
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ),
+                        // show a compact preview of selected items
+                        child: Text(
+                          selectedMuscles.join(' • '),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+
+
 
                     TextField(
                       controller: setsCtrl,
@@ -180,7 +278,7 @@ class _ExercisesPageState extends State<ExercisesPage> {
                   onPressed: () async {
                     final ex = Exercise(
                       name: nameCtrl.text.trim(),
-                      muscles: selectedMuscle,
+                      muscles: selectedMuscles.join(' • '),  //join the multiselect
                       sets: int.tryParse(setsCtrl.text) ?? 0,
                       reps: int.tryParse(repsCtrl.text) ?? 0,
                       unit: unit,
