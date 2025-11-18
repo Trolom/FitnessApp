@@ -26,10 +26,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for ios - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return ios;
       case TargetPlatform.macOS:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for macos - '
@@ -59,4 +56,14 @@ class DefaultFirebaseOptions {
     projectId: 'fittness-app-f0f18',
     storageBucket: 'fittness-app-f0f18.firebasestorage.app',
   );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyChtLdmIYrKQ-o1nhPCTknQybNHbPZeTgU',
+    appId: '1:394195813408:ios:fe49c1cfb56b49c0eae845',
+    messagingSenderId: '394195813408',
+    projectId: 'fittness-app-f0f18',
+    storageBucket: 'fittness-app-f0f18.firebasestorage.app',
+    iosBundleId: 'com.example.fitnessProject',
+  );
+
 }

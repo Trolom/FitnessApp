@@ -1,8 +1,22 @@
 import 'package:flutter/material.dart';
 
 import '../misc/exercise.dart';          // Exercise model
-import '../content.dart';        // baseExercises
-import '../misc/exercise_service.dart'; // Firestore access
+import '../content.dart';                // baseExercises
+import '../misc/exercise_service.dart';  // Firestore access
+
+// for the dropdown menu options when choosing for custom exercises
+const kMuscleOptions = <String>[
+  'Chest',
+  'Back',
+  'Legs',
+  'Shoulders',
+  'Arms',
+  'Core',
+  'Glutes',
+  'Quads',
+  'Hamstrings',
+  'Calves',
+];
 
 class ExercisesPage extends StatefulWidget {
   const ExercisesPage({super.key});
@@ -101,81 +115,84 @@ class _ExercisesPageState extends State<ExercisesPage> {
 
   void _openAddDialog() {
     final nameCtrl = TextEditingController();
-    final musclesCtrl = TextEditingController();
     final setsCtrl = TextEditingController();
     final repsCtrl = TextEditingController();
 
     String unit = 'reps';
+    String selectedMuscle = kMuscleOptions.first; // default dropdown selection
 
     showDialog(
       context: context,
       builder: (_) {
-        return AlertDialog(
-          title: const Text('Add Custom Exercise'),
-          content: SingleChildScrollView(
-            child: Column(
-              children: [
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: 'Name'),
-                ),
-                TextField(
-                  controller: musclesCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Muscles (e.g. Chest • Triceps • Core)',
-                  ),
-                ),
-                TextField(
-                  controller: setsCtrl,
-                  decoration: const InputDecoration(labelText: 'Sets'),
-                  keyboardType: TextInputType.number,
-                ),
-                TextField(
-                  controller: repsCtrl,
-                  decoration: const InputDecoration(labelText: 'Reps / Seconds'),
-                  keyboardType: TextInputType.number,
-                ),
+        return StatefulBuilder( //local state for the dialog
+          builder: (ctx, setLocalState) {
+            return AlertDialog(
+              title: const Text('Add Custom Exercise'),
+              content: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: nameCtrl,
+                      decoration: const InputDecoration(labelText: 'Name'),
+                    ),
 
-                const SizedBox(height: 10),
+                    //replaced the text input with a dropdown menu for the muscle group
+                    DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(labelText: 'Muscle group'),
+                      initialValue: selectedMuscle,
+                      items: kMuscleOptions
+                          .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                          .toList(),
+                      onChanged: (v) => setLocalState(() => selectedMuscle = v!), //to only render the dialog and not the whole page when updated
+                    ),
 
-                DropdownButton<String>(
-                  value: unit,
-                  items: const [
-                    DropdownMenuItem(
-                        value: 'reps', child: Text('Reps')),
-                    DropdownMenuItem(
-                        value: 'sec', child: Text('Seconds')),
+                    TextField(
+                      controller: setsCtrl,
+                      decoration: const InputDecoration(labelText: 'Sets'),
+                      keyboardType: TextInputType.number,
+                    ),
+                    TextField(
+                      controller: repsCtrl,
+                      decoration: const InputDecoration(labelText: 'Reps / Seconds'),
+                      keyboardType: TextInputType.number,
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    DropdownButton<String>(
+                      value: unit, // this is fine (not the FormField version)
+                      items: const [
+                        DropdownMenuItem(value: 'reps', child: Text('Reps')),
+                        DropdownMenuItem(value: 'sec', child: Text('Seconds')),
+                      ],
+                      onChanged: (v) => setLocalState(() => unit = v!), // same here as above
+                    ),
                   ],
-                  onChanged: (v) => setState(() => unit = v!),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  child: const Text('Save'),
+                  onPressed: () async {
+                    final ex = Exercise(
+                      name: nameCtrl.text.trim(),
+                      muscles: selectedMuscle,
+                      sets: int.tryParse(setsCtrl.text) ?? 0,
+                      reps: int.tryParse(repsCtrl.text) ?? 0,
+                      unit: unit,
+                      isCustom: true,
+                    );
+                    await ExerciseService.addCustomExercise(ex);
+                    if (mounted) Navigator.pop(context);
+                  },
                 ),
               ],
-            ),
-          ),
-
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-
-            FilledButton(
-              child: const Text('Save'),
-              onPressed: () async {
-                final ex = Exercise(
-                  name: nameCtrl.text.trim(),
-                  muscles: musclesCtrl.text.trim(),
-                  sets: int.tryParse(setsCtrl.text) ?? 0,
-                  reps: int.tryParse(repsCtrl.text) ?? 0,
-                  unit: unit,
-                  isCustom: true,
-                );
-
-                await ExerciseService.addCustomExercise(ex);
-
-                if (mounted) Navigator.pop(context);
-              },
-            ),
-          ],
+            );
+          },
         );
       },
     );
@@ -268,17 +285,15 @@ class _ExerciseTile extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
 
+            //removed the "Add to today button" and replaced with close
             const SizedBox(height: 16),
-
-            FilledButton.icon(
-              onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('${ex.name} added to workout')),
-                );
-              },
-              icon: const Icon(Icons.add),
-              label: const Text("Add to today"),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close),
+                label: const Text("Close"),
+              ),
             ),
           ],
         ),
