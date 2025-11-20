@@ -19,7 +19,9 @@ class ProfilePage extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
-            onPressed: () {},
+            onPressed: () {
+              _openEditProfileDialog(context, uid);
+            },
           ),
         ],
       ),
@@ -41,11 +43,10 @@ class ProfilePage extends StatelessWidget {
           final data = snap.data!.data() as Map<String, dynamic>;
 
           // Firestore fields
-          final name = data['name'] ?? 'User';
-          final height = data['heightCm'] ?? 0;
-          final weight = data['weightKg'] ?? 0.0;
-          final kcalTarget = data['kcalTarget'] ?? 0;
-          final workoutsPerWeek = data['workoutsPerWeek'] ?? 0;
+          final name = (data['name'] ?? 'User').toString();
+          final height = (data['heightCm'] as num?)?.toInt() ?? 0;
+          final weight = (data['weightKg'] as num?)?.toDouble() ?? 0.0;
+          final goalWeight = (data['goalWeightKg'] as num?)?.toDouble(); // may be null
           final imageUrl = data['profileImageUrl'];
 
           final email = FirebaseAuth.instance.currentUser?.email ?? '-';
@@ -98,25 +99,38 @@ class ProfilePage extends StatelessWidget {
               const SizedBox(height: 16),
               const Divider(),
 
+              const SizedBox(height: 16),
+              const Divider(),
+
               const SizedBox(height: 12),
-              const Text('Goals',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              const Text(
+                'Tracking',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
               const SizedBox(height: 8),
 
               _Tile(
-                icon: Icons.flag,
-                title: 'Weekly workouts',
-                subtitle: "$workoutsPerWeek / week",
+                icon: Icons.monitor_weight_outlined,
+                title: 'Goal weight',
+                subtitle: goalWeight != null
+                    ? '${goalWeight.toStringAsFixed(1)} kg'
+                    : 'Tap to set a goal',
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () {},
+                onTap: () {
+                  _editGoalWeightDialog(context, uid, goalWeight);
+                },
               ),
+
               _Tile(
-                icon: Icons.flag,
-                title: 'Kcal/day',
-                subtitle: "$kcalTarget",
+                icon: Icons.track_changes,
+                title: 'Track today',
+                subtitle: 'Add weight & calories',
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () {},
+                onTap: () {
+                  _addDailyEntryDialog(context, uid, weight);
+                },
               ),
+
 
               const SizedBox(height: 16),
               const Divider(),
@@ -347,6 +361,268 @@ void _changePasswordDialog(BuildContext context) {
   );
 }
 
+
+Future<void> _openEditProfileDialog(BuildContext context, String uid) async {
+  // Load current values from Firestore
+  final doc =
+      await FirebaseFirestore.instance.collection('users').doc(uid).get();
+  final data = doc.data() ?? <String, dynamic>{};
+
+  final nameCtrl = TextEditingController(text: (data['name'] ?? 'User').toString());
+  final heightCtrl =
+      TextEditingController(text: (data['heightCm'] ?? '').toString());
+  final weightCtrl =
+      TextEditingController(text: (data['weightKg'] ?? '').toString());
+
+  await showDialog(
+    context: context,
+    builder: (ctx) {
+      return AlertDialog(
+        title: const Text('Edit profile'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(labelText: 'Name'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: heightCtrl,
+                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(labelText: 'Height (cm)'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: weightCtrl,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'Weight (kg)'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final name = nameCtrl.text.trim();
+              if (name.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Name cannot be empty')),
+                );
+                return;
+              }
+
+              final height = int.tryParse(heightCtrl.text.trim());
+              final weight = double.tryParse(weightCtrl.text.trim());
+
+              try {
+                await FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(uid)
+                    .set({
+                  'name': name,
+                  if (height != null) 'heightCm': height,
+                  if (weight != null) 'weightKg': weight,
+                }, SetOptions(merge: true));
+
+                Navigator.pop(ctx);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Profile updated')),
+                );
+              } on FirebaseException catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      e.message ?? 'Failed to update profile',
+                    ),
+                  ),
+                );
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+Future<void> _editGoalWeightDialog(
+  BuildContext context,
+  String uid,
+  double? currentGoal,
+) async {
+  final controller = TextEditingController(
+    text: currentGoal != null ? currentGoal.toString() : '',
+  );
+
+  await showDialog(
+    context: context,
+    builder: (ctx) {
+      return AlertDialog(
+        title: const Text('Set goal weight'),
+        content: TextField(
+          controller: controller,
+          keyboardType:
+              const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            labelText: 'Goal weight (kg)',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final text = controller.text.trim();
+              final value = double.tryParse(text);
+              if (value == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Enter a valid number for goal weight'),
+                  ),
+                );
+                return;
+              }
+
+              try {
+                await FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(uid)
+                    .set(
+                  {'goalWeightKg': value},
+                  SetOptions(merge: true),
+                );
+
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Goal weight updated')),
+                );
+              } on FirebaseException catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      e.message ?? 'Failed to update goal weight',
+                    ),
+                  ),
+                );
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+Future<void> _addDailyEntryDialog(
+  BuildContext context,
+  String uid,
+  double currentWeight,
+) async {
+  final weightCtrl = TextEditingController(
+    text: currentWeight > 0 ? currentWeight.toString() : '',
+  );
+  final caloriesCtrl = TextEditingController();
+
+  await showDialog(
+    context: context,
+    builder: (ctx) {
+      return AlertDialog(
+        title: const Text('Track today'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: weightCtrl,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Weight (kg)',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: caloriesCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Calories (kcal)',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final weightVal =
+                  double.tryParse(weightCtrl.text.trim());
+              final caloriesVal =
+                  int.tryParse(caloriesCtrl.text.trim());
+
+              if (weightVal == null || caloriesVal == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Enter valid weight and calories'),
+                  ),
+                );
+                return;
+              }
+
+              final now = DateTime.now();
+              final dateKey =
+                  '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+              try {
+                await FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(uid)
+                    .collection('dailyLogs')
+                    .doc(dateKey)
+                    .set({
+                  'date': Timestamp.fromDate(now),
+                  'weightKg': weightVal,
+                  'calories': caloriesVal,
+                }, SetOptions(merge: true));
+
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Entry saved')),
+                );
+              } on FirebaseException catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      e.message ?? 'Failed to save entry',
+                    ),
+                  ),
+                );
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      );
+    },
+  );
+}
 
 
 class _Tile extends StatelessWidget {

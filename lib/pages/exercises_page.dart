@@ -9,34 +9,25 @@ import '../misc/exercise_service.dart';  // Firestore access
 const kMuscleOptions = <String>[
   // Upper body – pushing
   'Chest',
-  'Upper Chest',
-  'Lower Chest',
-  'Front Delts',
-  'Side Delts',
-  'Rear Delts',
-  'Triceps',
-  // Upper body – pulling
-  'Back',
+  'Back'
+  'Lower back',
   'Lats',
-  'Upper Back',
-  'Mid Back',
-  'Lower Back',
-  'Traps',
-  'Rhomboids',
+  'Legs',
+  'Quads',
+  'Hamstrings',
+  'Glutes',
+  'Calves',
+  'Shoulders',
+  'Delts',
+  'Arms',
   'Biceps',
+  'Triceps',
   'Forearms',
-  // Core & hips
   'Core',
   'Abs',
   'Obliques',
-  'Hip Flexors',
-  'Adductors (Inner Thigh)',
-  'Abductors (Outer Thigh)',
-  // Lower body
-  'Glutes',
-  'Quads',
-  'Hamstrings',
-  'Calves',
+  'Lower abs',
+  'Hip flexors'
 ];
 
 

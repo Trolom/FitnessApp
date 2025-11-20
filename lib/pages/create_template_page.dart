@@ -3,6 +3,9 @@ import '../misc/template.dart';
 import '../misc/template_service.dart';
 import '../content.dart';
 import '../misc/exercise_block.dart';
+//
+import '../misc/exercise.dart';
+import '../misc/exercise_service.dart'; 
 
 class CreateTemplatePage extends StatefulWidget {
   const CreateTemplatePage({super.key});
@@ -14,6 +17,15 @@ class CreateTemplatePage extends StatefulWidget {
 class _CreateTemplatePageState extends State<CreateTemplatePage> {
   final _nameCtrl = TextEditingController();
   final List<ExerciseBlock> _blocks = [];
+
+    Stream<List<Exercise>> _allExercisesStream() {                 // NEW
+    return ExerciseService.userExercisesStream().map((userList) {
+      return [
+        ...baseExercises,
+        ...userList,
+      ];
+    });
+  }   
 
   @override
   Widget build(BuildContext context) {
@@ -58,6 +70,7 @@ class _CreateTemplatePageState extends State<CreateTemplatePage> {
               onPressed: () {
                 showModalBottomSheet(
                   context: context,
+                  isScrollControlled: true,
                   builder: (_) => _exercisePicker(),
                 );
               },
@@ -87,36 +100,145 @@ class _CreateTemplatePageState extends State<CreateTemplatePage> {
     );
   }
 
-  Widget _exercisePicker() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: baseExercises.map((ex) {
-        return ListTile(
-          title: Text(ex.name),
-          subtitle: Text(ex.muscles),
-          onTap: () {
-            // Convert "Chest • Triceps • Core" → ['Chest','Triceps','Core']
-            final muscleList = ex.muscles
-                .split(' • ')
-                .map((m) => m.trim())
-                .where((m) => m.isNotEmpty)
-                .toList();
 
-            setState(() {
-              _blocks.add(
-                ExerciseBlock(
-                  name: ex.name,
-                  sets: ex.sets,
-                  reps: ex.reps,
-                  muscles: muscleList,   // ← NEW
+// added exercise picker with a search bar and local state
+Widget _exercisePicker() {
+  final qCtrl = TextEditingController(); //search controller
+  String query = '';                      //local query
+
+  return SafeArea(
+    child: StatefulBuilder( // local state for the sheet
+      builder: (ctx, setLocalState) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom, // use ctx
+          ),
+          child: SizedBox(
+            height: 560,
+            child: Column(
+              children: [
+                // added search field
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: TextField(
+                    controller: qCtrl,
+                    onChanged: (v) =>
+                        setLocalState(() => query = v.trim().toLowerCase()),
+                    decoration: InputDecoration(
+                      hintText: 'Search exercises (name or muscles)',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      isDense: true,
+                    ),
+                  ),
                 ),
-              );
-            });
 
-            Navigator.pop(context);
-          },
+                // ist driven by merged stream + search filter
+                Expanded(
+                  child: StreamBuilder<List<Exercise>>(
+                    stream: _allExercisesStream(),
+                    builder: (context, snap) {
+                      if (!snap.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      final all = [...snap.data!];
+
+                      final filtered = query.isEmpty
+                          ? all
+                          : all.where((ex) {
+                              final n = ex.name.toLowerCase();
+                              final m = ex.muscles.toLowerCase();
+                              return n.contains(query) || m.contains(query);
+                            }).toList()
+                            ..sort((a, b) =>
+                              a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+                      if (filtered.isEmpty) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(24),
+                            child: Text('No matches. Try another search.'),
+                          ),
+                        );
+                      }
+
+                      return ListView.separated(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: filtered.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        itemBuilder: (_, i) {
+                          final ex = filtered[i];
+                          return ListTile(
+                            title: Row(
+                              children: [
+                                Text(ex.name),
+                                if (ex.isCustom) ...[
+                                  const SizedBox(width: 8),
+                                  const _CustomTag(),
+                                ],
+                              ],
+                            ),
+                            subtitle: Text(ex.muscles),
+                            trailing: Text(
+                              ex.unit == 'sec'
+                                  ? '${ex.reps} sec'
+                                  : '${ex.sets}×${ex.reps}',
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            onTap: () {
+                              final muscleList = ex.muscles
+                                  .split('•')
+                                  .map((m) => m.trim())
+                                  .where((m) => m.isNotEmpty)
+                                  .toList();
+
+                              setState(() {
+                                _blocks.add(
+                                  ExerciseBlock(
+                                    name: ex.name,
+                                    sets: ex.sets,
+                                    reps: ex.reps,
+                                    muscles: muscleList,
+                                  ),
+                                );
+                              });
+
+                              Navigator.pop(ctx); // use ctx
+                            },
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
-      }).toList(),
+      },
+    ),
+  );
+} // closes _exercisePicker()
+
+}
+
+// small custom chip so users can see which ones are their created templates
+class _CustomTag extends StatelessWidget {
+  const _CustomTag();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: scheme.primaryContainer,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: const Text("Custom", style: TextStyle(fontSize: 10)),
     );
   }
-}
+}       
