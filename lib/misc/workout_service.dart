@@ -26,7 +26,6 @@ class WorkoutService {
             snap.docs.map((d) => WorkoutLog.fromMap(d.data())).toList());
   }
 
-  /// NEW — needed for the calendar
   static Stream<Map<DateTime, Map<String, int>>> muscleWorkByDayStream() {
     return streamWorkouts().map((workouts) {
       final result = <DateTime, Map<String, int>>{};
@@ -35,14 +34,11 @@ class WorkoutService {
         final dayKey = DateTime(w.when.year, w.when.month, w.when.day);
         result.putIfAbsent(dayKey, () => {});
 
-        // Each workout contains: List<String> muscles
         for (final rawMuscle in w.muscles) {
 
-          // Map detailed muscle → calendar group
           final group = muscleToGroup[rawMuscle] ?? null;
-          if (group == null) continue; // skip unknown muscles
+          if (group == null) continue;
 
-          // Count it
           result[dayKey]![group] = (result[dayKey]![group] ?? 0) + 1;
         }
       }

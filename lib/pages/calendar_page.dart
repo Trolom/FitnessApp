@@ -37,7 +37,6 @@ class _CalendarPageState extends State<CalendarPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Calendar')),
 
-      // ⭐ Listen to Firestore muscle-per-day data
       body: StreamBuilder<Map<DateTime, Map<String, int>>>(
         stream: WorkoutService.muscleWorkByDayStream(),
         builder: (context, snap) {
@@ -113,7 +112,6 @@ class _CalendarPageState extends State<CalendarPage> {
                 ),
               ),
 
-              // Day summary (pie chart)
               if (selectedKey != null)
                 Expanded(
                   child: Padding(

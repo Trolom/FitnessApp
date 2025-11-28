@@ -19,7 +19,7 @@ class _CreateTemplatePageState extends State<CreateTemplatePage> {
   final List<ExerciseBlock> _blocks = [];
 
     Stream<List<Exercise>> _allExercisesStream() {                 // NEW
-    return ExerciseService.userExercisesStream().map((userList) {
+    return ExerciseService.downloadUserExercisesStream().map((userList) {
       return [
         ...baseExercises,
         ...userList,
@@ -206,7 +206,7 @@ Widget _exercisePicker() {
                                 );
                               });
 
-                              Navigator.pop(ctx); // use ctx
+                              Navigator.pop(ctx);
                             },
                           );
                         },
@@ -221,7 +221,7 @@ Widget _exercisePicker() {
       },
     ),
   );
-} // closes _exercisePicker()
+}
 
 }
 

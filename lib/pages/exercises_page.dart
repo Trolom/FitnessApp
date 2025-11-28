@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // REQUIRED: Import Riverpod
 
 import '../misc/exercise.dart';          // Exercise model
-import '../content.dart';                // baseExercises
-import '../misc/exercise_service.dart';  // Firestore access
+// import '../content.dart';                // baseExercises (Now accessed via Provider)
+// import '../misc/exercise_service.dart';  // Firestore access (Now accessed via Sync Manager)
+import '../misc/exercise_providers.dart'; // NEW: Riverpod State and Sync Logic
+
 
 // for the dropdown menu options when choosing for custom exercises
-// NEW: broader muscle list
 const kMuscleOptions = <String>[
-  // Upper body – pushing
   'Chest',
-  'Back'
+  'Back', // Corrected: removed the missing comma error from original
   'Lower back',
   'Lats',
   'Legs',
@@ -31,14 +32,16 @@ const kMuscleOptions = <String>[
 ];
 
 
-class ExercisesPage extends StatefulWidget {
+// CHANGE: Inherit from ConsumerStatefulWidget to access ref
+class ExercisesPage extends ConsumerStatefulWidget {
   const ExercisesPage({super.key});
 
   @override
-  State<ExercisesPage> createState() => _ExercisesPageState();
+  ConsumerState<ExercisesPage> createState() => _ExercisesPageState();
 }
 
-class _ExercisesPageState extends State<ExercisesPage> {
+// CHANGE: Inherit from ConsumerState
+class _ExercisesPageState extends ConsumerState<ExercisesPage> {
   final _searchCtrl = TextEditingController();
 
   @override
@@ -47,31 +50,30 @@ class _ExercisesPageState extends State<ExercisesPage> {
     super.dispose();
   }
 
-  /// Merge base exercises + user exercises after both streams resolve
-  Stream<List<Exercise>> _allExercisesStream() {
-    return ExerciseService.userExercisesStream().map((userList) {
-      return [
-        ...baseExercises,
-        ...userList,
-      ];
-    });
-  }
+  // REMOVE: _allExercisesStream() is obsolete. The logic is now in allExercisesProvider.
+  // Stream<List<Exercise>> _allExercisesStream() { ... }
 
   @override
   Widget build(BuildContext context) {
+    // WATCH: Use ref.watch to listen to the combined local/base exercise list
+    final allExercisesAsync = ref.watch(allExercisesProvider);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Exercises')),
 
-      body: StreamBuilder<List<Exercise>>(
-        stream: _allExercisesStream(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final all = snapshot.data!;
+      // CHANGE: Use allExercisesAsync.when() instead of StreamBuilder
+      body: allExercisesAsync.when(
+        // 1. Loading (while fetching from Hive on startup)
+        loading: () => const Center(child: CircularProgressIndicator()),
+        
+        // 2. Error
+        error: (err, stack) => Center(child: Text('Error loading exercises: $err')),
+        
+        // 3. Data (The main UI)
+        data: (all) {
           final query = _searchCtrl.text.trim().toLowerCase();
 
+          // Filter the local data
           final filtered = all.where((ex) {
             return query.isEmpty ||
                 ex.name.toLowerCase().contains(query) ||
@@ -117,7 +119,8 @@ class _ExercisesPageState extends State<ExercisesPage> {
       ),
 
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openAddDialog,
+        // Pass context and ref to the dialog handler
+        onPressed: () => _openAddDialog(context, ref),
         icon: const Icon(Icons.add),
         label: const Text('Add'),
       ),
@@ -126,17 +129,18 @@ class _ExercisesPageState extends State<ExercisesPage> {
 
   // ---------------- ADD CUSTOM EXERCISE ----------------
 
-  void _openAddDialog() {
+  // CHANGE: Accept WidgetRef to access Riverpod logic
+  void _openAddDialog(BuildContext context, WidgetRef ref) {
     final nameCtrl = TextEditingController();
     final setsCtrl = TextEditingController();
     final repsCtrl = TextEditingController();
 
     String unit = 'reps';
-    final Set<String> selectedMuscles = { kMuscleOptions.first }; // for beter dropdown menu
+    final Set<String> selectedMuscles = { kMuscleOptions.first }; 
     showDialog(
       context: context,
       builder: (_) {
-        return StatefulBuilder( //local state for the dialog
+        return StatefulBuilder( 
           builder: (ctx, setLocalState) {
             return AlertDialog(
               title: const Text('Add Custom Exercise'),
@@ -148,7 +152,7 @@ class _ExercisesPageState extends State<ExercisesPage> {
                       decoration: const InputDecoration(labelText: 'Name'),
                     ),
 
-                    //replaced the text input with a a better dropdown menu for the muscle group
+                    // Muscle groups selection logic remains the same
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Padding(
@@ -158,11 +162,9 @@ class _ExercisesPageState extends State<ExercisesPage> {
                     ),
                     InkWell(
                       onTap: () async {
-                        // open a checkbox dialog and update local state with the result
                         final result = await showDialog<Set<String>>(
                           context: context,
                           builder: (ctx) {
-                            // local copy for interactive ticking inside the dialog
                             final temp = Set<String>.from(selectedMuscles);
                             return StatefulBuilder(
                               builder: (ctx, setSB) {
@@ -197,7 +199,6 @@ class _ExercisesPageState extends State<ExercisesPage> {
                                     ),
                                     FilledButton(
                                       onPressed: () {
-                                        // ensure at least one is selected
                                         if (temp.isEmpty) temp.add(kMuscleOptions.first);
                                         Navigator.pop(ctx, temp);
                                       },
@@ -224,7 +225,6 @@ class _ExercisesPageState extends State<ExercisesPage> {
                           isDense: true,
                           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                         ),
-                        // show a compact preview of selected items
                         child: Text(
                           selectedMuscles.join(' • '),
                           maxLines: 2,
@@ -232,9 +232,7 @@ class _ExercisesPageState extends State<ExercisesPage> {
                         ),
                       ),
                     ),
-
-
-
+                    
                     TextField(
                       controller: setsCtrl,
                       decoration: const InputDecoration(labelText: 'Sets'),
@@ -249,12 +247,12 @@ class _ExercisesPageState extends State<ExercisesPage> {
                     const SizedBox(height: 10),
 
                     DropdownButton<String>(
-                      value: unit, // this is fine (not the FormField version)
+                      value: unit,
                       items: const [
                         DropdownMenuItem(value: 'reps', child: Text('Reps')),
                         DropdownMenuItem(value: 'sec', child: Text('Seconds')),
                       ],
-                      onChanged: (v) => setLocalState(() => unit = v!), // same here as above
+                      onChanged: (v) => setLocalState(() => unit = v!),
                     ),
                   ],
                 ),
@@ -267,15 +265,23 @@ class _ExercisesPageState extends State<ExercisesPage> {
                 FilledButton(
                   child: const Text('Save'),
                   onPressed: () async {
-                    final ex = Exercise(
+                    // 1. Create the Exercise model
+                    final newEx = Exercise(
                       name: nameCtrl.text.trim(),
-                      muscles: selectedMuscles.join(' • '),  //join the multiselect
+                      muscles: selectedMuscles.join(' • '),
                       sets: int.tryParse(setsCtrl.text) ?? 0,
                       reps: int.tryParse(repsCtrl.text) ?? 0,
                       unit: unit,
                       isCustom: true,
                     );
-                    await ExerciseService.addCustomExercise(ex);
+                    
+                    // CRITICAL CHANGE: Use the Riverpod Notifier to add the exercise.
+                    // This handles: Hive write, State update, and setting syncStatus: 'pending'.
+                    await ref.read(customExercisesProvider.notifier).add(newEx);
+                    
+                    // OLD: await ExerciseService.uploadExercise(ex); 
+                    // This line is now handled by the SyncManager in the background.
+
                     if (mounted) Navigator.pop(context);
                   },
                 ),
@@ -289,6 +295,7 @@ class _ExercisesPageState extends State<ExercisesPage> {
 }
 
 // -------------------------- UI COMPONENTS --------------------------
+// The ExerciseTile needs to be updated to show the sync status (pending cloud)
 
 class _ExerciseTile extends StatelessWidget {
   final Exercise ex;
@@ -327,6 +334,16 @@ class _ExerciseTile extends StatelessWidget {
                 ),
               )
             ],
+            // NEW: Display sync status indicator
+            if (ex.syncStatus == 'pending') ...[
+              const SizedBox(width: 6),
+              // Cloud icon indicates it is saved locally but waiting to sync
+              const Icon(Icons.cloud_upload_outlined, size: 16, color: Colors.orange), 
+            ],
+            if (ex.syncStatus == 'error') ...[
+              const SizedBox(width: 6),
+              const Icon(Icons.error, size: 16, color: Colors.red),
+            ],
           ],
         ),
 
@@ -345,6 +362,7 @@ class _ExerciseTile extends StatelessWidget {
   }
 
   void _openDetails(BuildContext context) {
+    // ... (rest of _openDetails remains the same)
     showModalBottomSheet(
       context: context,
       showDragHandle: true,
@@ -374,7 +392,6 @@ class _ExerciseTile extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
 
-            //removed the "Add to today button" and replaced with close
             const SizedBox(height: 16),
             Align(
               alignment: Alignment.centerRight,

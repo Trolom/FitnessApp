@@ -25,7 +25,7 @@ class WorkoutLog {
       'totalKg': totalKg,
       'bestSet': bestSet,
       'setsDesc': setsDesc,
-      'muscles': muscles,     // NEW
+      'muscles': muscles,
     };
   }
 
@@ -37,7 +37,7 @@ class WorkoutLog {
       totalKg: m['totalKg'],
       bestSet: m['bestSet'],
       setsDesc: m['setsDesc'],
-      muscles: List<String>.from(m['muscles'] ?? []), // NEW
+      muscles: List<String>.from(m['muscles'] ?? []),
     );
   }
 }
