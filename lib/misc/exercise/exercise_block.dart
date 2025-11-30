@@ -1,22 +1,35 @@
-class ExerciseBlock {
-  final String name;
-  final int sets;
-  final int reps;
-  final List<String> muscles;  // ADD
+// exercise_block.dart
 
-  const ExerciseBlock({
+import 'package:hive_flutter/hive_flutter.dart';
+
+part 'exercise_block.g.dart';
+
+@HiveType(typeId: 2)
+class ExerciseBlock extends HiveObject {
+  
+  @HiveField(0)
+  final String name;
+  @HiveField(1)
+  final int sets;
+  @HiveField(2)
+  final int reps;
+  @HiveField(3)
+  final List<String> muscles;  
+
+  ExerciseBlock({
     required this.name,
     required this.sets,
     required this.reps,
-    required this.muscles,     // ADD
+    required this.muscles,     
   });
+  
 
   Map<String, dynamic> toMap() {
     return {
       'name': name,
       'sets': sets,
       'reps': reps,
-      'muscles': muscles,       // ADD
+      'muscles': muscles,
     };
   }
 
@@ -25,7 +38,7 @@ class ExerciseBlock {
       name: map['name'] ?? '',
       sets: map['sets'] ?? 0,
       reps: map['reps'] ?? 0,
-      muscles: List<String>.from(map['muscles'] ?? []), // ADD
+      muscles: List<String>.from(map['muscles'] ?? []),
     );
   }
 }

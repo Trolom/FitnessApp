@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'misc/exercise.dart';
-import 'misc/template.dart';
-import 'misc/exercise_block.dart';
+import 'misc/exercise/exercise.dart';
+import 'misc/template/template.dart';
+import 'misc/exercise/exercise_block.dart';
 
 List<Exercise> baseExercises = [
   // --- Bodyweight & Calisthenics ---
@@ -76,7 +76,30 @@ List<Exercise> baseExercises = [
   Exercise(name: 'Treadmill Run', muscles: 'Legs • Core', sets: 1, reps: 30, unit: 'min'),
 ];
 
-const List<Template> baseTemplates = [
+const kMuscleOptions = <String>[
+  'Chest',
+  'Back',
+  'Lower back',
+  'Lats',
+  'Legs',
+  'Quads',
+  'Hamstrings',
+  'Glutes',
+  'Calves',
+  'Shoulders',
+  'Delts',
+  'Arms',
+  'Biceps',
+  'Triceps',
+  'Forearms',
+  'Core',
+  'Abs',
+  'Obliques',
+  'Lower abs',
+  'Hip flexors'
+];
+
+List<Template> baseTemplates = [
   Template(
     name: 'Push Day (Hypertrophy)',
     exercises: [

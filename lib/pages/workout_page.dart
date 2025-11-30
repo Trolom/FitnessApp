@@ -1,7 +1,7 @@
 // lib/pages/workout_page.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../misc/template.dart';
+import '../misc/template/template.dart';
 import '../misc/workout_service.dart';
 import '../misc/workout_log.dart';
 

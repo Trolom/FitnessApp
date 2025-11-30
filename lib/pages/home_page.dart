@@ -1,18 +1,26 @@
 import 'package:flutter/material.dart';
-import '../misc/template_card.dart';
-import '../misc/template.dart';
-import '../content.dart';
-import '../misc/template_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../misc/template/template_card.dart';
+import '../misc/template/template.dart';
+// import '../misc/template/template_service.dart'; // NO LONGER DIRECTLY USED
+import '../misc/template/template_providers.dart';
+import '../misc/template/template_service.dart';
 import 'create_template_page.dart';
+import '../content.dart';
 import '../../charts/calories_chart.dart';
 import '../../charts/muscle_groups_chart.dart';
 import '../../charts/body_tracker_chart.dart';
 
-class HomePage extends StatelessWidget {
+
+class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) { // ADD WidgetRef ref
+    
+    // WATCH: Listen to the merged list of templates (Base + Custom from Hive)
+    final allTemplatesAsync = ref.watch(allTemplatesProvider);
+
     return SafeArea(
       child: CustomScrollView(
         slivers: [
@@ -28,7 +36,6 @@ class HomePage extends StatelessWidget {
               delegate: SliverChildListDelegate(
                 [
 
-                  // ----- CHARTS -----
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
@@ -105,51 +112,48 @@ class HomePage extends StatelessWidget {
                     ),
                   ),
 
-                  // ----- BASE TEMPLATES -----
-                  ...baseTemplates.map(
-                    (t) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: TemplateCard(template: t),
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // ----- USER TEMPLATES -----
-                  StreamBuilder<List<Template>>(
-                    stream: TemplateService.userTemplates(),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) {
-                        return const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(20),
-                            child: CircularProgressIndicator(),
-                          ),
-                        );
-                      }
-
-                      final userTemplates = snapshot.data!;
-                      if (userTemplates.isEmpty) {
-                        return const SizedBox();
-                      }
-
+                  // CHANGE: Handle template rendering based on AsyncValue state
+                  allTemplatesAsync.when(
+                    loading: () => const Center(child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: CircularProgressIndicator(),
+                    )),
+                    error: (err, stack) => Center(child: Text('Error loading templates: $err')),
+                    data: (allTemplates) {
+                      
+                      final baseTemplatesList = allTemplates.where((t) => !t.isCustom).toList();
+                      final userTemplatesList = allTemplates.where((t) => t.isCustom).toList();
+                      
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SizedBox(height: 12),
-                          const Text(
-                            'Your Templates',
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.w700),
-                          ),
-                          const SizedBox(height: 8),
-
-                          ...userTemplates.map(
+                          // ----- BASE TEMPLATES -----
+                          ...baseTemplatesList.map(
                             (t) => Padding(
                               padding: const EdgeInsets.only(bottom: 12),
                               child: TemplateCard(template: t),
                             ),
                           ),
+                          
+                          const SizedBox(height: 8),
+                          
+                          // ----- USER TEMPLATES -----
+                          if (userTemplatesList.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Your Templates',
+                              style: TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 8),
+
+                            ...userTemplatesList.map(
+                              (t) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: TemplateCard(template: t),
+                              ),
+                            ),
+                          ],
                         ],
                       );
                     },

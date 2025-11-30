@@ -1,38 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // REQUIRED: Import Riverpod
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../misc/exercise.dart';          // Exercise model
-// import '../content.dart';                // baseExercises (Now accessed via Provider)
-// import '../misc/exercise_service.dart';  // Firestore access (Now accessed via Sync Manager)
-import '../misc/exercise_providers.dart'; // NEW: Riverpod State and Sync Logic
-
-
-// for the dropdown menu options when choosing for custom exercises
-const kMuscleOptions = <String>[
-  'Chest',
-  'Back', // Corrected: removed the missing comma error from original
-  'Lower back',
-  'Lats',
-  'Legs',
-  'Quads',
-  'Hamstrings',
-  'Glutes',
-  'Calves',
-  'Shoulders',
-  'Delts',
-  'Arms',
-  'Biceps',
-  'Triceps',
-  'Forearms',
-  'Core',
-  'Abs',
-  'Obliques',
-  'Lower abs',
-  'Hip flexors'
-];
+import '../misc/exercise/exercise.dart';
+import '../content.dart'; // baseExercises (Now accessed via Provider), now just for kMuscleOptions
+// import '../misc/exercise_service.dart'; // Firestore access (Now accessed via Sync Manager)
+import '../misc/exercise/exercise_providers.dart'; // NEW: Riverpod State and Sync Logic
 
 
-// CHANGE: Inherit from ConsumerStatefulWidget to access ref
 class ExercisesPage extends ConsumerStatefulWidget {
   const ExercisesPage({super.key});
 
@@ -40,7 +14,6 @@ class ExercisesPage extends ConsumerStatefulWidget {
   ConsumerState<ExercisesPage> createState() => _ExercisesPageState();
 }
 
-// CHANGE: Inherit from ConsumerState
 class _ExercisesPageState extends ConsumerState<ExercisesPage> {
   final _searchCtrl = TextEditingController();
 
@@ -49,9 +22,6 @@ class _ExercisesPageState extends ConsumerState<ExercisesPage> {
     _searchCtrl.dispose();
     super.dispose();
   }
-
-  // REMOVE: _allExercisesStream() is obsolete. The logic is now in allExercisesProvider.
-  // Stream<List<Exercise>> _allExercisesStream() { ... }
 
   @override
   Widget build(BuildContext context) {
@@ -63,17 +33,11 @@ class _ExercisesPageState extends ConsumerState<ExercisesPage> {
 
       // CHANGE: Use allExercisesAsync.when() instead of StreamBuilder
       body: allExercisesAsync.when(
-        // 1. Loading (while fetching from Hive on startup)
         loading: () => const Center(child: CircularProgressIndicator()),
-        
-        // 2. Error
         error: (err, stack) => Center(child: Text('Error loading exercises: $err')),
-        
-        // 3. Data (The main UI)
         data: (all) {
           final query = _searchCtrl.text.trim().toLowerCase();
 
-          // Filter the local data
           final filtered = all.where((ex) {
             return query.isEmpty ||
                 ex.name.toLowerCase().contains(query) ||
@@ -82,7 +46,6 @@ class _ExercisesPageState extends ConsumerState<ExercisesPage> {
 
           return Column(
             children: [
-              // SEARCH FIELD
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                 child: TextField(
@@ -119,7 +82,6 @@ class _ExercisesPageState extends ConsumerState<ExercisesPage> {
       ),
 
       floatingActionButton: FloatingActionButton.extended(
-        // Pass context and ref to the dialog handler
         onPressed: () => _openAddDialog(context, ref),
         icon: const Icon(Icons.add),
         label: const Text('Add'),
@@ -129,7 +91,6 @@ class _ExercisesPageState extends ConsumerState<ExercisesPage> {
 
   // ---------------- ADD CUSTOM EXERCISE ----------------
 
-  // CHANGE: Accept WidgetRef to access Riverpod logic
   void _openAddDialog(BuildContext context, WidgetRef ref) {
     final nameCtrl = TextEditingController();
     final setsCtrl = TextEditingController();
@@ -152,7 +113,6 @@ class _ExercisesPageState extends ConsumerState<ExercisesPage> {
                       decoration: const InputDecoration(labelText: 'Name'),
                     ),
 
-                    // Muscle groups selection logic remains the same
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Padding(
@@ -194,7 +154,7 @@ class _ExercisesPageState extends ConsumerState<ExercisesPage> {
                                   ),
                                   actions: [
                                     TextButton(
-                                      onPressed: () => Navigator.pop(ctx), // cancel
+                                      onPressed: () => Navigator.pop(ctx),
                                       child: const Text('Cancel'),
                                     ),
                                     FilledButton(
@@ -265,7 +225,6 @@ class _ExercisesPageState extends ConsumerState<ExercisesPage> {
                 FilledButton(
                   child: const Text('Save'),
                   onPressed: () async {
-                    // 1. Create the Exercise model
                     final newEx = Exercise(
                       name: nameCtrl.text.trim(),
                       muscles: selectedMuscles.join(' • '),
@@ -275,13 +234,11 @@ class _ExercisesPageState extends ConsumerState<ExercisesPage> {
                       isCustom: true,
                     );
                     
-                    // CRITICAL CHANGE: Use the Riverpod Notifier to add the exercise.
-                    // This handles: Hive write, State update, and setting syncStatus: 'pending'.
+                    // CRITICAL CHANGE: We use the Riverpod Notifier to add the exercise.
                     await ref.read(customExercisesProvider.notifier).add(newEx);
                     
                     // OLD: await ExerciseService.uploadExercise(ex); 
-                    // This line is now handled by the SyncManager in the background.
-
+                    
                     if (mounted) Navigator.pop(context);
                   },
                 ),

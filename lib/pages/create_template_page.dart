@@ -1,31 +1,37 @@
 import 'package:flutter/material.dart';
-import '../misc/template.dart';
-import '../misc/template_service.dart';
-import '../content.dart';
-import '../misc/exercise_block.dart';
-//
-import '../misc/exercise.dart';
-import '../misc/exercise_service.dart'; 
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // NEW: Import Riverpod
 
-class CreateTemplatePage extends StatefulWidget {
+import '../misc/template/template.dart';
+// import '../misc/template/template_service.dart'; // NO LONGER USED
+import '../misc/template/template_providers.dart'; // NEW: Template Notifier
+import '../misc/exercise/exercise_providers.dart'; // NEW: Exercise Provider
+import '../misc/exercise/exercise_block.dart';
+
+// Import Exercise model only for type hinting; data comes from provider
+import '../misc/exercise/exercise.dart'; 
+
+
+// CHANGE: Inherit from ConsumerStatefulWidget
+class CreateTemplatePage extends ConsumerStatefulWidget {
   const CreateTemplatePage({super.key});
 
   @override
-  State<CreateTemplatePage> createState() => _CreateTemplatePageState();
+  ConsumerState<CreateTemplatePage> createState() => _CreateTemplatePageState();
 }
 
-class _CreateTemplatePageState extends State<CreateTemplatePage> {
+// CHANGE: Inherit from ConsumerState
+class _CreateTemplatePageState extends ConsumerState<CreateTemplatePage> {
   final _nameCtrl = TextEditingController();
   final List<ExerciseBlock> _blocks = [];
 
-    Stream<List<Exercise>> _allExercisesStream() {                 // NEW
-    return ExerciseService.downloadUserExercisesStream().map((userList) {
-      return [
-        ...baseExercises,
-        ...userList,
-      ];
-    });
-  }   
+  // REMOVE: The stream is now handled by allExercisesProvider
+  // Stream<List<Exercise>> _allExercisesStream() { ... }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +77,7 @@ class _CreateTemplatePageState extends State<CreateTemplatePage> {
                 showModalBottomSheet(
                   context: context,
                   isScrollControlled: true,
-                  builder: (_) => _exercisePicker(),
+                  builder: (_) => _exercisePicker(context), // Pass context
                 );
               },
               icon: const Icon(Icons.add),
@@ -82,13 +88,22 @@ class _CreateTemplatePageState extends State<CreateTemplatePage> {
 
             FilledButton(
               onPressed: () async {
+                if (_nameCtrl.text.trim().isEmpty || _blocks.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Name and exercises are required.')),
+                    );
+                    return;
+                }
+
                 final tpl = Template(
-                  name: _nameCtrl.text,
+                  name: _nameCtrl.text.trim(),
                   exercises: _blocks,
                   isCustom: true,
                 );
 
-                await TemplateService.addUserTemplate(tpl);
+                // CRITICAL CHANGE: Use the Riverpod Notifier to add the template.
+                // This handles: Hive write, State update, and background sync.
+                await ref.read(customTemplatesProvider.notifier).add(tpl);
 
                 if (context.mounted) Navigator.pop(context);
               },
@@ -102,9 +117,13 @@ class _CreateTemplatePageState extends State<CreateTemplatePage> {
 
 
 // added exercise picker with a search bar and local state
-Widget _exercisePicker() {
+Widget _exercisePicker(BuildContext parentContext) {
   final qCtrl = TextEditingController(); //search controller
   String query = '';                      //local query
+
+  // WATCH: Get the merged list of all exercises (Base + Custom from Hive)
+  final allExercisesAsync = ref.watch(allExercisesProvider);
+
 
   return SafeArea(
     child: StatefulBuilder( // local state for the sheet
@@ -135,17 +154,14 @@ Widget _exercisePicker() {
                   ),
                 ),
 
-                // ist driven by merged stream + search filter
+                // List driven by Riverpod state + search filter
                 Expanded(
-                  child: StreamBuilder<List<Exercise>>(
-                    stream: _allExercisesStream(),
-                    builder: (context, snap) {
-                      if (!snap.hasData) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-
-                      final all = [...snap.data!];
-
+                  // Use allExercisesAsync.when() to handle loading/error states
+                  child: allExercisesAsync.when(
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (err, stack) => Center(child: Text('Error loading exercises: $err')),
+                    data: (all) {
+                      
                       final filtered = query.isEmpty
                           ? all
                           : all.where((ex) {
@@ -241,4 +257,4 @@ class _CustomTag extends StatelessWidget {
       child: const Text("Custom", style: TextStyle(fontSize: 10)),
     );
   }
-}       
+}

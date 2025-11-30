@@ -13,16 +13,17 @@ class TemplateService {
     return uid;
   }
 
-  static Future<void> addUserTemplate(Template tpl) async {
-    await _firestore
-        .collection('users')
-        .doc(_uid)
-        .collection('templates')
-        .add(tpl.toMap());
+  static Future<void> uploadTemplate(Template tpl) async {
+    final collection = _firestore.collection('users').doc(_uid).collection('templates');
+    
+    if (tpl.id != null) {
+      await collection.doc(tpl.id).set(tpl.toMap()); 
+    } else {
+      await collection.add(tpl.toMap()); 
+    }
   }
 
-  // stream user templates and include each document id.
-  static Stream<List<Template>> userTemplates() {
+  static Stream<List<Template>> downloadUserTemplatesStream() {
     return _firestore
         .collection('users')
         .doc(_uid)
@@ -34,7 +35,6 @@ class TemplateService {
             .toList());
   }
 
-  // delete by document id
   static Future<void> deleteUserTemplate(String id) async {
     await _firestore
         .collection('users')

@@ -5,9 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart'; // REQUIRED: For generating unique local IDs
 
 import 'exercise.dart';
-import '../local_db.dart'; // Your Hive implementation
+import '../../local_db.dart'; // Your Hive implementation
 import 'exercise_service.dart'; // Your Firebase functions
-import '../content.dart';          // Your baseExercises list
+import '../../content.dart';          // Your baseExercises list
 
 // --- Configuration ---
 const _uuid = Uuid();
