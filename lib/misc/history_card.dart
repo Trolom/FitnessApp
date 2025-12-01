@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../misc/workout_log.dart';
+import 'workout/workout_log.dart';
 
 class HistoryCard extends StatelessWidget {
   final WorkoutLog w;

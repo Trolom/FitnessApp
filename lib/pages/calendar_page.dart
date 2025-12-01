@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../charts/day_muscle_pie.dart';
-import '../misc/workout_service.dart';
+import '../misc/workout/workout_service.dart';
 import '../content.dart';
 
 class CalendarPage extends StatefulWidget {

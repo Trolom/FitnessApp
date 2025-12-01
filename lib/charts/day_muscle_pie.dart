@@ -1,6 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import '../mock_data.dart';
+import '../content.dart';
 
 
 /// You can use it in two ways:

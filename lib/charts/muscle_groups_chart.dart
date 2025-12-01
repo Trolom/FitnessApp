@@ -1,6 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import '../misc/workout_service.dart';
+import '../misc/workout/workout_service.dart';
 import '../content.dart';
 
 class MuscleGroupsChart extends StatelessWidget {

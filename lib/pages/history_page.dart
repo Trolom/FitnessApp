@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../misc/workout_log.dart';
-import '../misc/workout_service.dart';
+import '../misc/workout/workout_log.dart';
+import '../misc/workout/workout_service.dart';
 import '../misc/history_card.dart';
 
 class HistoryPage extends StatelessWidget {

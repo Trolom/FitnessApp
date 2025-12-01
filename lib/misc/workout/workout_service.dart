@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../content.dart';
+import '../../content.dart';
 import 'workout_log.dart';
 
 class WorkoutService {

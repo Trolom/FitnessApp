@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../misc/template/template_card.dart';
-import '../misc/template/template.dart';
 // import '../misc/template/template_service.dart'; // NO LONGER DIRECTLY USED
 import '../misc/template/template_providers.dart';
-import '../misc/template/template_service.dart';
 import 'create_template_page.dart';
-import '../content.dart';
 import '../../charts/calories_chart.dart';
 import '../../charts/muscle_groups_chart.dart';
 import '../../charts/body_tracker_chart.dart';
@@ -112,7 +109,6 @@ class HomePage extends ConsumerWidget {
                     ),
                   ),
 
-                  // CHANGE: Handle template rendering based on AsyncValue state
                   allTemplatesAsync.when(
                     loading: () => const Center(child: Padding(
                       padding: EdgeInsets.all(20),

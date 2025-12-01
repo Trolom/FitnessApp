@@ -1,17 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../misc/user/profile_providers.dart';
+import '../misc/user/profile_utils.dart';
 
-class ProfilePage extends StatelessWidget {
+
+class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    final uid = firebaseUser?.uid;
 
     if (uid == null) {
       return const Center(child: Text("No user logged in"));
     }
+
+    final profileAsync = ref.watch(userProfileProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -19,37 +25,27 @@ class ProfilePage extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
-            onPressed: () {
-              _openEditProfileDialog(context, uid);
-            },
+            onPressed: profileAsync.isLoading
+                ? null
+                : () {
+                    if (profileAsync.hasValue) {
+                      openEditProfileDialog(context, ref, profileAsync.value!);
+                    }
+                  },
           ),
         ],
       ),
 
-      body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('users')
-            .doc(uid)
-            .snapshots(),
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (!snap.hasData || !snap.data!.exists) {
-            return const Center(child: Text("No profile data found."));
-          }
-
-          final data = snap.data!.data() as Map<String, dynamic>;
-
-          // Firestore fields
-          final name = (data['name'] ?? 'User').toString();
-          final height = (data['heightCm'] as num?)?.toInt() ?? 0;
-          final weight = (data['weightKg'] as num?)?.toDouble() ?? 0.0;
-          final goalWeight = (data['goalWeightKg'] as num?)?.toDouble(); // may be null
-          final imageUrl = data['profileImageUrl'];
-
-          final email = FirebaseAuth.instance.currentUser?.email ?? '-';
+      body: profileAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(child: Text("Error loading profile.")),
+        data: (profile) {
+          final email = firebaseUser?.email ?? '-';
+          final name = profile.name;
+          final height = profile.heightCm;
+          final weight = profile.weightKg;
+          final goalWeight = profile.goalWeightKg;
+          final imageUrl = profile.profileImageUrl;
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -57,24 +53,13 @@ class ProfilePage extends StatelessWidget {
               // Avatar + name + email
               Row(
                 children: [
-                  CircleAvatar(
-                    radius: 34,
-                    backgroundImage:
-                        imageUrl != null ? NetworkImage(imageUrl) : null,
-                    child: imageUrl == null
-                        ? const Icon(Icons.person, size: 36)
-                        : null,
-                  ),
+                  CircleAvatar( /* ... avatar logic ... */ ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(name,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                            )),
+                        Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 4),
                         Text(email, style: const TextStyle(fontSize: 13)),
                       ],
@@ -92,70 +77,70 @@ class ProfilePage extends StatelessWidget {
                   _StatCard(label: 'Height', value: '$height cm'),
                   const SizedBox(width: 12),
                   _StatCard(label: 'Weight', value: '$weight kg'),
-                  
                 ],
               ),
 
               const SizedBox(height: 16),
               const Divider(),
-
               const SizedBox(height: 16),
               const Divider(),
 
               const SizedBox(height: 12),
-              const Text(
-                'Tracking',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-              ),
+              const Text('Tracking', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               const SizedBox(height: 8),
 
+              // Goal Weight Tile
               _Tile(
                 icon: Icons.monitor_weight_outlined,
                 title: 'Goal weight',
-                subtitle: goalWeight != null
-                    ? '${goalWeight.toStringAsFixed(1)} kg'
-                    : 'Tap to set a goal',
+                subtitle: goalWeight != null ? '${goalWeight.toStringAsFixed(1)} kg' : 'Tap to set a goal',
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
-                  _editGoalWeightDialog(context, uid, goalWeight);
+                  // Call utility function
+                  editGoalWeightDialog(context, ref, profile);
                 },
               ),
 
+              // Track Today Tile
               _Tile(
                 icon: Icons.track_changes,
                 title: 'Track today',
                 subtitle: 'Add weight & calories',
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
-                  _addDailyEntryDialog(context, uid, weight);
+                  // Call utility function
+                  addDailyEntryDialog(context, ref, weight);
                 },
               ),
-
 
               const SizedBox(height: 16),
               const Divider(),
 
               const SizedBox(height: 12),
-              const Text('Account & Data',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              const Text('Account & Data', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               const SizedBox(height: 8),
 
+              // Change Password Tile
               _Tile(
                 icon: Icons.lock_outline,
                 title: 'Change password',
                 subtitle: 'Manage your sign-in',
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
-                  _changePasswordDialog(context);
+                  // Call utility function
+                  changePasswordDialog(context);
                 },
               ),
+              
+              // Delete Account Tile
               _Tile(
                 icon: Icons.delete_forever,
                 title: 'Delete account',
                 subtitle: 'Remove account and all data',
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
-                  _deleteAccount(context);
+                  // Call utility function
+                  deleteAccount(context);
                 },
               ),
 
@@ -165,8 +150,7 @@ class ProfilePage extends StatelessWidget {
                 onPressed: () async {
                   await FirebaseAuth.instance.signOut();
                   if (context.mounted) {
-                    Navigator.of(context)
-                        .pushNamedAndRemoveUntil('/login', (_) => false);
+                    Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
                   }
                 },
                 icon: const Icon(Icons.logout),
@@ -180,449 +164,6 @@ class ProfilePage extends StatelessWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
-  final String label;
-  final String value;
-  const _StatCard({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: scheme.outlineVariant),
-        ),
-        child: Column(
-          children: [
-            Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 4),
-            Text(label, style: const TextStyle(fontSize: 12)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-Future<void> _deleteAccount(BuildContext context) async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) return;
-
-  // Ask user to confirm password before deleting account
-  final passwordController = TextEditingController();
-  final email = user.email!;
-
-  final reauth = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text("Confirm identity"),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text("Enter your password to delete your account ($email)"),
-          const SizedBox(height: 12),
-          TextField(
-            controller: passwordController,
-            obscureText: true,
-            decoration: const InputDecoration(
-              labelText: "Password",
-              border: OutlineInputBorder(),
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Cancel")),
-        FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: Colors.red),
-          onPressed: () => Navigator.pop(ctx, true),
-          child: const Text("Confirm"),
-        )
-      ],
-    ),
-  );
-
-  if (reauth != true) return;
-
-  try {
-    // 1. Reauthenticate
-    final credential = EmailAuthProvider.credential(
-      email: email,
-      password: passwordController.text.trim(),
-    );
-
-    await user.reauthenticateWithCredential(credential);
-
-    final uid = user.uid;
-
-    // 2. Delete Firestore doc
-    await FirebaseFirestore.instance.collection("users").doc(uid).delete();
-
-    // 3. Delete Firebase Auth account
-    await user.delete();
-
-    // 4. Navigate to login
-    if (context.mounted) {
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
-    }
-  } on FirebaseAuthException catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(e.message ?? "Failed to delete account")),
-    );
-  }
-}
-
-void _changePasswordDialog(BuildContext context) {
-  final oldPass = TextEditingController();
-  final newPass = TextEditingController();
-  final confirmPass = TextEditingController();
-
-  showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text("Change Password"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: oldPass,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: "Current password",
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: newPass,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: "New password",
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: confirmPass,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: "Confirm new password",
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final user = FirebaseAuth.instance.currentUser;
-
-              if (newPass.text.trim() != confirmPass.text.trim()) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("New passwords do not match")),
-                );
-                return;
-              }
-
-              try {
-                // re-authenticate user
-                final cred = EmailAuthProvider.credential(
-                  email: user!.email!,
-                  password: oldPass.text.trim(),
-                );
-
-                await user.reauthenticateWithCredential(cred);
-
-                // change password
-                await user.updatePassword(newPass.text.trim());
-
-                
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Password updated successfully")),
-                );
-                
-              } on FirebaseAuthException catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(e.message ?? "Error updating password")),
-                );
-              }
-            },
-            child: const Text("Update"),
-          ),
-        ],
-      );
-    },
-  );
-}
-
-
-Future<void> _openEditProfileDialog(BuildContext context, String uid) async {
-  // Load current values from Firestore
-  final doc =
-      await FirebaseFirestore.instance.collection('users').doc(uid).get();
-  final data = doc.data() ?? <String, dynamic>{};
-
-  final nameCtrl = TextEditingController(text: (data['name'] ?? 'User').toString());
-  final heightCtrl =
-      TextEditingController(text: (data['heightCm'] ?? '').toString());
-  final weightCtrl =
-      TextEditingController(text: (data['weightKg'] ?? '').toString());
-
-  await showDialog(
-    context: context,
-    builder: (ctx) {
-      return AlertDialog(
-        title: const Text('Edit profile'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameCtrl,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(labelText: 'Name'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: heightCtrl,
-                keyboardType: TextInputType.number,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(labelText: 'Height (cm)'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: weightCtrl,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Weight (kg)'),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final name = nameCtrl.text.trim();
-              if (name.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Name cannot be empty')),
-                );
-                return;
-              }
-
-              final height = int.tryParse(heightCtrl.text.trim());
-              final weight = double.tryParse(weightCtrl.text.trim());
-
-              try {
-                await FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(uid)
-                    .set({
-                  'name': name,
-                  if (height != null) 'heightCm': height,
-                  if (weight != null) 'weightKg': weight,
-                }, SetOptions(merge: true));
-
-                Navigator.pop(ctx);
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Profile updated')),
-                );
-              } on FirebaseException catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      e.message ?? 'Failed to update profile',
-                    ),
-                  ),
-                );
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      );
-    },
-  );
-}
-
-Future<void> _editGoalWeightDialog(
-  BuildContext context,
-  String uid,
-  double? currentGoal,
-) async {
-  final controller = TextEditingController(
-    text: currentGoal != null ? currentGoal.toString() : '',
-  );
-
-  await showDialog(
-    context: context,
-    builder: (ctx) {
-      return AlertDialog(
-        title: const Text('Set goal weight'),
-        content: TextField(
-          controller: controller,
-          keyboardType:
-              const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            labelText: 'Goal weight (kg)',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final text = controller.text.trim();
-              final value = double.tryParse(text);
-              if (value == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Enter a valid number for goal weight'),
-                  ),
-                );
-                return;
-              }
-
-              try {
-                await FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(uid)
-                    .set(
-                  {'goalWeightKg': value},
-                  SetOptions(merge: true),
-                );
-
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Goal weight updated')),
-                );
-              } on FirebaseException catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      e.message ?? 'Failed to update goal weight',
-                    ),
-                  ),
-                );
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      );
-    },
-  );
-}
-
-Future<void> _addDailyEntryDialog(
-  BuildContext context,
-  String uid,
-  double currentWeight,
-) async {
-  final weightCtrl = TextEditingController(
-    text: currentWeight > 0 ? currentWeight.toString() : '',
-  );
-  final caloriesCtrl = TextEditingController();
-
-  await showDialog(
-    context: context,
-    builder: (ctx) {
-      return AlertDialog(
-        title: const Text('Track today'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: weightCtrl,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: 'Weight (kg)',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: caloriesCtrl,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Calories (kcal)',
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final weightVal =
-                  double.tryParse(weightCtrl.text.trim());
-              final caloriesVal =
-                  int.tryParse(caloriesCtrl.text.trim());
-
-              if (weightVal == null || caloriesVal == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Enter valid weight and calories'),
-                  ),
-                );
-                return;
-              }
-
-              final now = DateTime.now();
-              final dateKey =
-                  '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-
-              try {
-                await FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(uid)
-                    .collection('dailyLogs')
-                    .doc(dateKey)
-                    .set({
-                  'date': Timestamp.fromDate(now),
-                  'weightKg': weightVal,
-                  'calories': caloriesVal,
-                }, SetOptions(merge: true));
-
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Entry saved')),
-                );
-              } on FirebaseException catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      e.message ?? 'Failed to save entry',
-                    ),
-                  ),
-                );
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      );
-    },
-  );
-}
 
 
 class _Tile extends StatelessWidget {
@@ -655,6 +196,33 @@ class _Tile extends StatelessWidget {
         subtitle: subtitle != null ? Text(subtitle!) : null,
         trailing: trailing,
         onTap: onTap,
+      ),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final String label;
+  final String value;
+  const _StatCard({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: scheme.outlineVariant),
+        ),
+        child: Column(
+          children: [
+            Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            Text(label, style: const TextStyle(fontSize: 12)),
+          ],
+        ),
       ),
     );
   }

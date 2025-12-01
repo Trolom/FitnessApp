@@ -1,36 +1,39 @@
-// local_db.dart (Assuming this is the Hive implementation)
-
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'misc/exercise/exercise.dart';
-import 'misc/template/template.dart'; // NEW
-import 'misc/exercise/exercise_block.dart'; // NEW
+import 'misc/template/template.dart';
+import 'misc/exercise/exercise_block.dart';
+import 'misc/user/user_profile.dart';
 
 const String _exerciseBoxName = 'exercises';
-const String _templateBoxName = 'templates'; // NEW
+const String _templateBoxName = 'templates';
+const String _profileBoxName = 'user_profile';
 
 class LocalDbService {
   
   late Box<Exercise> _exerciseBox;
-  late Box<Template> _templateBox; // NEW
+  late Box<Template> _templateBox;
+  late Box<UserProfile> _profileBox;
 
   Future<void> init() async {
     await Hive.initFlutter();
     
-    // Register Adapters
     if (!Hive.isAdapterRegistered(ExerciseAdapter().typeId)) {
       Hive.registerAdapter(ExerciseAdapter());
     }
-    if (!Hive.isAdapterRegistered(ExerciseBlockAdapter().typeId)) { // NEW
+    if (!Hive.isAdapterRegistered(ExerciseBlockAdapter().typeId)) {
       Hive.registerAdapter(ExerciseBlockAdapter());
     }
-    if (!Hive.isAdapterRegistered(TemplateAdapter().typeId)) { // NEW
+    if (!Hive.isAdapterRegistered(TemplateAdapter().typeId)) {
       Hive.registerAdapter(TemplateAdapter());
     }
+    if (!Hive.isAdapterRegistered(UserProfileAdapter().typeId)) {
+      Hive.registerAdapter(UserProfileAdapter());
+    }
     
-    // Open Boxes
     _exerciseBox = await Hive.openBox<Exercise>(_exerciseBoxName);
-    _templateBox = await Hive.openBox<Template>(_templateBoxName); // NEW
+    _templateBox = await Hive.openBox<Template>(_templateBoxName);
+    _profileBox = await Hive.openBox<UserProfile>(_profileBoxName);
     
     debugPrint("Hive DB initialized.");
   }
@@ -70,6 +73,17 @@ class LocalDbService {
   Future<void> deleteTemplate(String id) async {
     await _templateBox.delete(id);
   }
+
+  Future<UserProfile?> getProfile(String uid) async {
+    return _profileBox.get(uid);
+  }
+
+  Future<void> saveProfile(UserProfile profile) async {
+    if (profile.uid.isEmpty) throw Exception("Profile requires UID.");
+    await _profileBox.put(profile.uid, profile);
+    debugPrint("Hive DB saved/updated profile: ${profile.name}");
+  }
+
 }
 
 final localDbService = LocalDbService();

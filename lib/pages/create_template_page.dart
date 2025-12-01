@@ -5,10 +5,7 @@ import '../misc/template/template.dart';
 // import '../misc/template/template_service.dart'; // NO LONGER USED
 import '../misc/template/template_providers.dart'; // NEW: Template Notifier
 import '../misc/exercise/exercise_providers.dart'; // NEW: Exercise Provider
-import '../misc/exercise/exercise_block.dart';
-
-// Import Exercise model only for type hinting; data comes from provider
-import '../misc/exercise/exercise.dart'; 
+import '../misc/exercise/exercise_block.dart'; 
 
 
 // CHANGE: Inherit from ConsumerStatefulWidget
