@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../misc/template/template.dart';
-import '../misc/workout/workout_service.dart';
 import '../misc/workout/workout_log.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../misc/workout/workout_providers.dart';
 
 class WorkoutSet {
   double? kg;
@@ -17,15 +18,16 @@ class WorkoutExercise {
   WorkoutExercise({required this.name, required this.sets});
 }
 
-class WorkoutPage extends StatefulWidget {
+// Changed to ConsumerStatefulWidget to access "ref"
+class WorkoutPage extends ConsumerStatefulWidget {
   final Template template;
   const WorkoutPage({super.key, required this.template});
 
   @override
-  State<WorkoutPage> createState() => _WorkoutPageState();
+  ConsumerState<WorkoutPage> createState() => _WorkoutPageState();
 }
 
-class _WorkoutPageState extends State<WorkoutPage> {
+class _WorkoutPageState extends ConsumerState<WorkoutPage> {
   late List<WorkoutExercise> _items;
   late Stopwatch _stopwatch;
   Timer? _ticker;
@@ -262,7 +264,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
           final setsDesc = _shortSummary();
           final duration = _stopwatch.elapsed.inSeconds;
 
-          final muscles = _collectMuscles();   // NEW
+          final muscles = _collectMuscles();
 
           final log = WorkoutLog(
             title: widget.template.name,
@@ -271,11 +273,13 @@ class _WorkoutPageState extends State<WorkoutPage> {
             totalKg: totalKg,
             bestSet: bestSet,
             setsDesc: setsDesc,
-            muscles: muscles,                  // NEW
+            muscles: muscles,
+            // Sync status will be handled by the provider (defaults to 'pending')
           );
 
-          await WorkoutService.saveWorkout(log);
-
+          // --- CHANGE: USE THE OFFLINE-FIRST PROVIDER ---
+          await ref.read(workoutLogsProvider.notifier).addLog(log);
+          
           if (!mounted) return;
           Navigator.of(context).pop();
 

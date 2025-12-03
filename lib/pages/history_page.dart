@@ -1,27 +1,28 @@
 import 'package:flutter/material.dart';
 import '../misc/workout/workout_log.dart';
-import '../misc/workout/workout_service.dart';
 import '../misc/history_card.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../misc/workout/workout_providers.dart';
 
-class HistoryPage extends StatelessWidget {
+class HistoryPage extends ConsumerWidget {
   const HistoryPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final workoutsAsync = ref.watch(workoutLogsProvider);
+
     return Scaffold(
       appBar: AppBar(title: const Text('History')),
 
-      body: StreamBuilder<List<WorkoutLog>>(
-        stream: WorkoutService.streamWorkouts(),
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snap.hasData || snap.data!.isEmpty) {
+      body: workoutsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(child: Text("Error loading history: $err")),
+        data: (workouts) {
+          
+          if (workouts.isEmpty) {
             return const Center(child: Text("No workouts yet."));
           }
 
-          final workouts = snap.data!;
           final grouped = _groupByMonth(workouts);
           final longestStreak = _longestStreak(workouts.map((w) => w.when).toList());
 
@@ -40,7 +41,6 @@ class HistoryPage extends StatelessWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Month header
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8, top: 8),
                     child: Row(
@@ -61,6 +61,7 @@ class HistoryPage extends StatelessWidget {
                     ),
                   ),
 
+                  // Workout Cards
                   for (final w in group.items) ...[
                     HistoryCard(w: w),
                     const SizedBox(height: 12),
@@ -74,11 +75,8 @@ class HistoryPage extends StatelessWidget {
     );
   }
 
-  // ------------------------------
-  // GROUP BY MONTH
-  // ------------------------------
-
   List<MonthGroup> _groupByMonth(List<WorkoutLog> items) {
+    // sort logic is redundant because provider does it, but kept for safety
     items = List.of(items)..sort((a, b) => b.when.compareTo(a.when));
 
     final map = <String, List<WorkoutLog>>{};
@@ -89,8 +87,7 @@ class HistoryPage extends StatelessWidget {
     }
 
     final groups = <MonthGroup>[];
-    map.forEach((k, v) =>
-        groups.add(MonthGroup(label: k, items: v)));
+    map.forEach((k, v) => groups.add(MonthGroup(label: k, items: v)));
 
     groups.sort((a, b) => b.items.first.when.compareTo(a.items.first.when));
     return groups;
@@ -100,11 +97,6 @@ class HistoryPage extends StatelessWidget {
         'January','February','March','April','May','June',
         'July','August','September','October','November','December'
       ][m - 1];
-
-  // ------------------------------
-  // STREAK LOGIC
-  // ------------------------------
-
   int _longestStreak(List<DateTime> dates) {
     if (dates.isEmpty) return 0;
 
@@ -130,9 +122,11 @@ class HistoryPage extends StatelessWidget {
   }
 }
 
-// ------------------------------
-// UI COMPONENTS (unchanged)
-// ------------------------------
+class MonthGroup {
+  final String label;
+  final List<WorkoutLog> items;
+  MonthGroup({required this.label, required this.items});
+}
 
 class _StreakBanner extends StatelessWidget {
   final int longestStreakDays;
@@ -150,7 +144,7 @@ class _StreakBanner extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
       child: Row(
         children: [
-          const Icon(Icons.local_fire_department),
+          const Icon(Icons.local_fire_department, color: Colors.orange),
           const SizedBox(width: 10),
           Text(
             'Longest streak: $longestStreakDays day${longestStreakDays == 1 ? '' : 's'}',
