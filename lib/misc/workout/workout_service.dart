@@ -5,26 +5,27 @@ import 'workout_log.dart';
 
 class WorkoutService {
   static final _db = FirebaseFirestore.instance;
-  static String get uid => FirebaseAuth.instance.currentUser!.uid;
+  static String get _uid => FirebaseAuth.instance.currentUser!.uid;
 
   static Future<void> saveWorkout(WorkoutLog log) async {
-    await _db
-        .collection('users')
-        .doc(uid)
-        .collection('workouts')
-        .add(log.toMap());
-  }
+      final collection = _db.collection('users').doc(_uid).collection('workouts');
+      if (log.id != null) {
+        await collection.doc(log.id).set(log.toMap());
+      } else {
+        await collection.add(log.toMap());
+      }
+    }
 
   static Stream<List<WorkoutLog>> streamWorkouts() {
-    return _db
-        .collection('users')
-        .doc(uid)
-        .collection('workouts')
-        .orderBy('when', descending: true)
-        .snapshots()
-        .map((snap) =>
-            snap.docs.map((d) => WorkoutLog.fromMap(d.data())).toList());
-  }
+      return _db
+          .collection('users')
+          .doc(_uid)
+          .collection('workouts')
+          .orderBy('when', descending: true)
+          .snapshots()
+          .map((snap) =>
+              snap.docs.map((d) => WorkoutLog.fromMap(d.data(), id: d.id)).toList());
+    }
 
   static Stream<Map<DateTime, Map<String, int>>> muscleWorkByDayStream() {
     return streamWorkouts().map((workouts) {
@@ -36,7 +37,7 @@ class WorkoutService {
 
         for (final rawMuscle in w.muscles) {
 
-          final group = muscleToGroup[rawMuscle] ?? null;
+          final group = muscleToGroup[rawMuscle];
           if (group == null) continue;
 
           result[dayKey]![group] = (result[dayKey]![group] ?? 0) + 1;
