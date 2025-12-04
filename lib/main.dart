@@ -5,6 +5,8 @@ import 'firebase_options.dart';
 import 'app.dart';
 import 'local_db.dart';
 import 'misc/workout/workout_service.dart';
+import 'misc/user/profile_service.dart';
+import 'misc/template/template_service.dart';
 
 Future<void> main() async {
     WidgetsFlutterBinding.ensureInitialized();
@@ -14,7 +16,9 @@ Future<void> main() async {
     );
     
     await localDbService.init(); 
-    WorkoutService.syncPendingWorkouts();
+    WorkoutService.monitorAuthState();
+    ProfileService.monitorAuthState();
+    TemplateService.monitorAuthState();
     
     runApp(
       const ProviderScope(

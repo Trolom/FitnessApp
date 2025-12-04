@@ -21,16 +21,17 @@ class TemplateAdapter extends TypeAdapter<Template> {
       name: fields[1] as String,
       exercises: (fields[2] as List).cast<ExerciseBlock>(),
       isCustom: fields[3] as bool,
-      syncStatus: fields[4] as String,
-      updatedAt: fields[5] as int,
-      isDeleted: fields[6] as bool,
+      syncStatus: fields[4] == null ? 'synced' : fields[4] as String,
+      updatedAt: fields[5] == null ? 0 : fields[5] as int,
+      isDeleted: fields[6] == null ? false : fields[6] as bool,
+      uid: fields[7] == null ? '' : fields[7] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, Template obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -44,7 +45,9 @@ class TemplateAdapter extends TypeAdapter<Template> {
       ..writeByte(5)
       ..write(obj.updatedAt)
       ..writeByte(6)
-      ..write(obj.isDeleted);
+      ..write(obj.isDeleted)
+      ..writeByte(7)
+      ..write(obj.uid);
   }
 
   @override

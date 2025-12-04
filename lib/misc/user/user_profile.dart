@@ -22,7 +22,6 @@ class UserProfile extends HiveObject {
   @HiveField(5)
   final String? profileImageUrl;
 
-  // Sync Metadata
   @HiveField(6)
   final String syncStatus;
   
@@ -73,17 +72,32 @@ class UserProfile extends HiveObject {
       'updatedAt': updatedAt,
     };
   }
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  static double _parseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
 
   factory UserProfile.fromMap(String uid, Map<String, dynamic> map) {
     return UserProfile(
       uid: uid,
       name: (map['name'] as String?) ?? 'User',
-      heightCm: (map['heightCm'] as num?)?.toInt() ?? 0,
-      weightKg: (map['weightKg'] as num?)?.toDouble() ?? 0.0,
-      goalWeightKg: (map['goalWeightKg'] as num?)?.toDouble(),
+      heightCm: _parseInt(map['heightCm']),
+      weightKg: _parseDouble(map['weightKg']),
+      goalWeightKg: map['goalWeightKg'] != null ? _parseDouble(map['goalWeightKg']) : null,
       profileImageUrl: (map['profileImageUrl'] as String?),
       syncStatus: (map['syncStatus'] as String?) ?? 'synced',
-      updatedAt: (map['updatedAt'] as int?) ?? 0,
+      updatedAt: _parseInt(map['updatedAt']),
     );
   }
 }

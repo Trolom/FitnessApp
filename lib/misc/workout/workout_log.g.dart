@@ -28,13 +28,14 @@ class WorkoutLogAdapter extends TypeAdapter<WorkoutLog> {
       syncStatus: fields[8] as String,
       updatedAt: fields[9] as int,
       isDeleted: fields[10] as bool,
+      uid: fields[11] == null ? '' : fields[11] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, WorkoutLog obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -56,7 +57,9 @@ class WorkoutLogAdapter extends TypeAdapter<WorkoutLog> {
       ..writeByte(9)
       ..write(obj.updatedAt)
       ..writeByte(10)
-      ..write(obj.isDeleted);
+      ..write(obj.isDeleted)
+      ..writeByte(11)
+      ..write(obj.uid);
   }
 
   @override

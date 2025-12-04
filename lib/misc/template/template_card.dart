@@ -1,19 +1,15 @@
-// template_card.dart
-
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // NEW
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'template.dart';
 import '../../pages/workout_page.dart';
-// import 'template_service.dart'; // NO LONGER USED DIRECTLY FOR DELETE
-import 'template_providers.dart'; // NEW
+import 'template_providers.dart'; 
 
-// CHANGE: Convert to ConsumerWidget
 class TemplateCard extends ConsumerWidget {
   final Template template;
   const TemplateCard({super.key, required this.template});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) { // ADD WidgetRef ref
+  Widget build(BuildContext context, WidgetRef ref) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -29,16 +25,13 @@ class TemplateCard extends ConsumerWidget {
                   ),
                 ),
 
-                // show delete only for user-created templates that have an id
-                // Note: We check if it's NOT deleted (!template.isDeleted) as well, 
-                // though the provider already filters this, it's safer.
+                // Show delete only for usercreated templates
                 if (template.isCustom && template.id != null) ...[
                   IconButton(
                     tooltip: 'Delete template',
                     icon: const Icon(Icons.delete_outline),
                     onPressed: () async {
                       final ok = await showDialog<bool>(
-                        // ... (Confirmation dialog remains the same) ...
                         context: context,
                         builder: (ctx) => AlertDialog(
                           title: const Text('Delete template?'),
@@ -57,8 +50,8 @@ class TemplateCard extends ConsumerWidget {
                       );
 
                       if (ok == true) {
-                        // CRITICAL CHANGE: Use the Riverpod Notifier for soft-delete
-                        await ref.read(customTemplatesProvider.notifier).delete(template);
+                        // used controller to delete
+                        await ref.read(templateControllerProvider).delete(template.id!);
                         
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -83,7 +76,18 @@ class TemplateCard extends ConsumerWidget {
                 ),
               ],
             ),
-            // ... (rest of the card remains the same)
+            
+            const SizedBox(height: 8),
+            ...template.exercises.take(3).map((e) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                "• ${e.name} (${e.sets} × ${e.reps})",
+                style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+              ),
+            )),
+            if (template.exercises.length > 3)
+              Text("... and ${template.exercises.length - 3} more", 
+                   style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
           ],
         ),
       ),

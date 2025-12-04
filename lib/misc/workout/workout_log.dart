@@ -1,6 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
 
-// this file will be generated automatically when we run the build command
 part 'workout_log.g.dart'; 
 
 @HiveType(typeId: 10)
@@ -31,13 +30,16 @@ class WorkoutLog extends HiveObject {
   final List<String> muscles;
 
   @HiveField(8)
-  final String syncStatus; // 'synced', 'pending', 'error'
+  final String syncStatus; 
   
   @HiveField(9)
   final int updatedAt;
   
   @HiveField(10)
   final bool isDeleted;
+
+  @HiveField(11, defaultValue: '')
+  final String uid; 
 
   WorkoutLog({
     this.id,
@@ -51,6 +53,7 @@ class WorkoutLog extends HiveObject {
     this.syncStatus = 'synced',
     this.updatedAt = 0,
     this.isDeleted = false,
+    required this.uid,
   });
 
   WorkoutLog copyWith({
@@ -65,6 +68,7 @@ class WorkoutLog extends HiveObject {
     String? syncStatus,
     int? updatedAt,
     bool? isDeleted,
+    String? uid,
   }) {
     return WorkoutLog(
       id: id ?? this.id,
@@ -78,6 +82,7 @@ class WorkoutLog extends HiveObject {
       syncStatus: syncStatus ?? this.syncStatus,
       updatedAt: updatedAt ?? this.updatedAt,
       isDeleted: isDeleted ?? this.isDeleted,
+      uid: uid ?? this.uid,
     );
   }
 
@@ -93,24 +98,36 @@ class WorkoutLog extends HiveObject {
       'syncStatus': syncStatus,
       'updatedAt': updatedAt,
       'isDeleted': isDeleted,
+      'uid': uid,
     };
   }
-
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
   factory WorkoutLog.fromMap(Map<String, dynamic> map, {String? id}) {
-    final whenEpoch = map['when'] as int? ?? 0;
+    int whenEpoch = 0;
+    if (map['when'] != null) {
+      whenEpoch = _parseInt(map['when']);
+    }
     
     return WorkoutLog(
       id: id,
       title: map['title'] as String? ?? '',
       when: DateTime.fromMillisecondsSinceEpoch(whenEpoch),
-      durationSec: (map['durationSec'] as num?)?.toInt() ?? 0,
-      totalKg: (map['totalKg'] as num?)?.toInt() ?? 0,
+      // to handle String or Int safely
+      durationSec: _parseInt(map['durationSec']),
+      totalKg: _parseInt(map['totalKg']),
       bestSet: map['bestSet'] as String? ?? '-',
       setsDesc: map['setsDesc'] as String? ?? '',
       muscles: List<String>.from(map['muscles'] ?? []),
       syncStatus: map['syncStatus'] as String? ?? 'synced',
-      updatedAt: (map['updatedAt'] as int?) ?? 0,
+      updatedAt: _parseInt(map['updatedAt']),
       isDeleted: (map['isDeleted'] as bool?) ?? false,
+      uid: map['uid'] as String? ?? '',
     );
   }
 }

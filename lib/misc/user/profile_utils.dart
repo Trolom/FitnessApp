@@ -1,4 +1,4 @@
-// misc/profile/profile_utils.dart
+// misc/user/profile_utils.dart
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -6,11 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'user_profile.dart';
-import 'profile_providers.dart'; // To access the UserProfileNotifier
-
-// -----------------------------------------------------------------------------
-// 1. EDIT PROFILE DIALOG (Offline-First Write)
-// -----------------------------------------------------------------------------
+import 'profile_providers.dart';
 
 Future<void> openEditProfileDialog(
     BuildContext context, WidgetRef ref, UserProfile currentProfile) async {
@@ -58,7 +54,7 @@ Future<void> openEditProfileDialog(
             onPressed: () async {
               final name = nameCtrl.text.trim();
               if (name.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Name cannot be empty')),
                 );
                 return;
@@ -74,8 +70,7 @@ Future<void> openEditProfileDialog(
               );
 
               try {
-                // Use the Riverpod Notifier for offline write and background sync
-                await ref.read(userProfileProvider.notifier).updateProfile(newProfile);
+                await ref.read(profileControllerProvider).updateProfile(newProfile);
 
                 if (context.mounted) Navigator.pop(ctx);
                 if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
@@ -94,10 +89,6 @@ Future<void> openEditProfileDialog(
     },
   );
 }
-
-// -----------------------------------------------------------------------------
-// 2. EDIT GOAL WEIGHT DIALOG (Offline-First Write)
-// -----------------------------------------------------------------------------
 
 Future<void> editGoalWeightDialog(
   BuildContext context,
@@ -141,7 +132,7 @@ Future<void> editGoalWeightDialog(
               );
 
               try {
-                await ref.read(userProfileProvider.notifier).updateProfile(newProfile);
+                await ref.read(profileControllerProvider).updateProfile(newProfile);
 
                 if (context.mounted) Navigator.pop(ctx);
                 if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
@@ -162,17 +153,14 @@ Future<void> editGoalWeightDialog(
 }
 
 
-// -----------------------------------------------------------------------------
-// 3. ADD DAILY ENTRY DIALOG (Placeholder for DailyLog Implementation)
-// -----------------------------------------------------------------------------
-
+// daily entry dialog
 Future<void> addDailyEntryDialog(
   BuildContext context,
   WidgetRef ref,
   double currentWeight,
 ) async {
-  // NOTE: This currently still uses direct Firebase calls as the DailyLog
-  // model and providers haven't been implemented yet. This will be replaced later.
+  // it currently still uses direct Firebase calls as the DailyLog
+  // model and providers not implemented yet
 
   final weightCtrl = TextEditingController(
     text: currentWeight > 0 ? currentWeight.toString() : '',
@@ -230,7 +218,7 @@ Future<void> addDailyEntryDialog(
                   '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
 
               try {
-                // !!! PLACEHOLDER: Must be replaced by DailyLogNotifier.add(log) later !!!
+                // should be replaced by DailyLogNotifier.add(log) later 
                 await FirebaseFirestore.instance
                     .collection('users')
                     .doc(uid)
@@ -259,12 +247,6 @@ Future<void> addDailyEntryDialog(
     },
   );
 }
-
-// -----------------------------------------------------------------------------
-// 4. AUTHENTICATION ACTIONS (Direct Firebase Calls - Requires Online)
-// -----------------------------------------------------------------------------
-
-// These actions are inherently destructive or security-critical and MUST be online.
 
 void changePasswordDialog(BuildContext context) {
   final oldPass = TextEditingController();
@@ -328,7 +310,6 @@ Future<void> deleteAccount(BuildContext context) async {
 
   final passwordController = TextEditingController();
   final email = user.email!;
-
   final reauth = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
@@ -358,14 +339,8 @@ Future<void> deleteAccount(BuildContext context) async {
     final credential = EmailAuthProvider.credential(email: email, password: passwordController.text.trim());
     await user.reauthenticateWithCredential(credential);
     final uid = user.uid;
-
-    // 1. Delete Firestore doc (we assume this is done before Auth deletion)
     await FirebaseFirestore.instance.collection("users").doc(uid).delete();
-
-    // 2. Delete Firebase Auth account
     await user.delete();
-
-    // 3. Navigate to login
     if (context.mounted) {
       Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
     }

@@ -1,7 +1,7 @@
 // app.dart
 
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // NEW
+import 'package:firebase_auth/firebase_auth.dart'; 
 
 import 'pages/home_page.dart';
 import 'pages/exercises_page.dart';
@@ -25,10 +25,10 @@ class FitApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      // 1. Set the home widget to the Auth Checker
       home: const AuthChecker(), 
       routes: {
-        // Keep routes for navigation *from* the checker (e.g., after logout)
+        '/login': (_) => const LoginPage(),
+        
         '/register': (_) => const RegisterPage(),
         '/home': (_) => const RootShell(),
         '/onboarding': (_) => const OnboardingPage(),
@@ -37,35 +37,21 @@ class FitApp extends StatelessWidget {
   }
 }
 
-// ====================================================================
-// NEW: Authentication Checker Widget
-// Checks cached token and routes user appropriately
-// ====================================================================
 class AuthChecker extends StatelessWidget {
   const AuthChecker({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Listen to the authentication state stream (handles cached token check)
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        
-        // 1. Loading state (Firebase is checking the cached token)
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
 
-        // 2. Data state (User is found - either online or via cached token)
         if (snapshot.hasData && snapshot.data != null) {
-          // If a User object is returned, they are logged in.
-          // Show the main application shell.
           return const RootShell();
-        } 
-        
-        // 3. No data state (No cached token, token expired, or user logged out)
-        else {
-          // No user found, show the Login page.
+        } else {
           return const LoginPage();
         }
       },
@@ -73,10 +59,6 @@ class AuthChecker extends StatelessWidget {
   }
 }
 
-
-// ====================================================================
-// RootShell remains the same
-// ====================================================================
 class RootShell extends StatefulWidget {
   const RootShell({super.key});
 

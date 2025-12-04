@@ -176,8 +176,6 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
                     ],
                   ),
                   const SizedBox(height: 8),
-
-                  // Header row
                   Row(
                     children: const [
                       SizedBox(width: 45, child: Text('#', textAlign: TextAlign.center)),
@@ -187,8 +185,6 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
                     ],
                   ),
                   const Divider(height: 12),
-
-                  // Set rows
                   ...List.generate(ex.sets.length, (i) {
                     final set = ex.sets[i];
                     return Padding(
@@ -267,15 +263,15 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
           final muscles = _collectMuscles();
 
           final log = WorkoutLog(
-            title: widget.template.name,
-            when: DateTime.now(),
-            durationSec: duration,
-            totalKg: totalKg,
-            bestSet: bestSet,
-            setsDesc: setsDesc,
-            muscles: muscles,
-            // Sync status will be handled by the provider (defaults to 'pending')
-          );
+              title: widget.template.name,
+              when: DateTime.now(),
+              durationSec: duration,
+              totalKg: totalKg,
+              bestSet: bestSet,
+              setsDesc: setsDesc,
+              muscles: muscles,
+              uid: '',
+            );
 
           await ref.read(workoutControllerProvider).addLog(log);
           if (!mounted) return;

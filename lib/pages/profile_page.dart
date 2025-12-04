@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../misc/user/profile_providers.dart';
 import '../misc/user/profile_utils.dart';
 
-
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
 
@@ -25,35 +24,40 @@ class ProfilePage extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
-            onPressed: profileAsync.isLoading
-                ? null
-                : () {
-                    if (profileAsync.hasValue) {
-                      openEditProfileDialog(context, ref, profileAsync.value!);
-                    }
-                  },
+            onPressed: (profileAsync.hasValue && profileAsync.value != null)
+                ? () {
+                    openEditProfileDialog(context, ref, profileAsync.value!);
+                  }
+                : null,
           ),
         ],
       ),
 
       body: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text("Error loading profile.")),
+        error: (err, stack) => Center(child: Text("Error loading profile: $err")),
         data: (profile) {
+          // handle the case where profile is not yet loaded
+          if (profile == null) {
+             return const Center(child: CircularProgressIndicator());
+          }
+
           final email = firebaseUser?.email ?? '-';
           final name = profile.name;
           final height = profile.heightCm;
           final weight = profile.weightKg;
           final goalWeight = profile.goalWeightKg;
-          final imageUrl = profile.profileImageUrl;
+          // final imageUrl = profile.profileImageUrl;
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             children: [
-              // Avatar + name + email
               Row(
                 children: [
-                  CircleAvatar( /* ... avatar logic ... */ ),
+                   CircleAvatar(
+                    radius: 30,
+                    child: Text(name.isNotEmpty ? name[0].toUpperCase() : 'U'),
+                  ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
@@ -96,7 +100,6 @@ class ProfilePage extends ConsumerWidget {
                 subtitle: goalWeight != null ? '${goalWeight.toStringAsFixed(1)} kg' : 'Tap to set a goal',
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
-                  // Call utility function
                   editGoalWeightDialog(context, ref, profile);
                 },
               ),
@@ -108,7 +111,6 @@ class ProfilePage extends ConsumerWidget {
                 subtitle: 'Add weight & calories',
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
-                  // Call utility function
                   addDailyEntryDialog(context, ref, weight);
                 },
               ),
@@ -127,7 +129,6 @@ class ProfilePage extends ConsumerWidget {
                 subtitle: 'Manage your sign-in',
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
-                  // Call utility function
                   changePasswordDialog(context);
                 },
               ),
@@ -139,7 +140,6 @@ class ProfilePage extends ConsumerWidget {
                 subtitle: 'Remove account and all data',
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
-                  // Call utility function
                   deleteAccount(context);
                 },
               ),
@@ -163,8 +163,6 @@ class ProfilePage extends ConsumerWidget {
     );
   }
 }
-
-
 
 class _Tile extends StatelessWidget {
   final IconData icon;

@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // NEW: Import Riverpod
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../misc/template/template.dart';
-// import '../misc/template/template_service.dart'; // NO LONGER USED
-import '../misc/template/template_providers.dart'; // NEW: Template Notifier
-import '../misc/exercise/exercise_providers.dart'; // NEW: Exercise Provider
+import '../misc/template/template_providers.dart';
+import '../misc/exercise/exercise_providers.dart'; 
 import '../misc/exercise/exercise_block.dart'; 
 
-
-// CHANGE: Inherit from ConsumerStatefulWidget
 class CreateTemplatePage extends ConsumerStatefulWidget {
   const CreateTemplatePage({super.key});
 
@@ -16,13 +13,9 @@ class CreateTemplatePage extends ConsumerStatefulWidget {
   ConsumerState<CreateTemplatePage> createState() => _CreateTemplatePageState();
 }
 
-// CHANGE: Inherit from ConsumerState
 class _CreateTemplatePageState extends ConsumerState<CreateTemplatePage> {
   final _nameCtrl = TextEditingController();
   final List<ExerciseBlock> _blocks = [];
-
-  // REMOVE: The stream is now handled by allExercisesProvider
-  // Stream<List<Exercise>> _allExercisesStream() { ... }
 
   @override
   void dispose() {
@@ -74,7 +67,7 @@ class _CreateTemplatePageState extends ConsumerState<CreateTemplatePage> {
                 showModalBottomSheet(
                   context: context,
                   isScrollControlled: true,
-                  builder: (_) => _exercisePicker(context), // Pass context
+                  builder: (_) => _exercisePicker(context),
                 );
               },
               icon: const Icon(Icons.add),
@@ -91,16 +84,13 @@ class _CreateTemplatePageState extends ConsumerState<CreateTemplatePage> {
                     );
                     return;
                 }
-
                 final tpl = Template(
                   name: _nameCtrl.text.trim(),
                   exercises: _blocks,
                   isCustom: true,
+                  uid: '', 
                 );
-
-                // CRITICAL CHANGE: Use the Riverpod Notifier to add the template.
-                // This handles: Hive write, State update, and background sync.
-                await ref.read(customTemplatesProvider.notifier).add(tpl);
+                await ref.read(templateControllerProvider).add(tpl);
 
                 if (context.mounted) Navigator.pop(context);
               },
@@ -113,27 +103,23 @@ class _CreateTemplatePageState extends ConsumerState<CreateTemplatePage> {
   }
 
 
-// added exercise picker with a search bar and local state
 Widget _exercisePicker(BuildContext parentContext) {
-  final qCtrl = TextEditingController(); //search controller
-  String query = '';                      //local query
+  final qCtrl = TextEditingController(); 
+  String query = '';                      
 
-  // WATCH: Get the merged list of all exercises (Base + Custom from Hive)
   final allExercisesAsync = ref.watch(allExercisesProvider);
 
-
   return SafeArea(
-    child: StatefulBuilder( // local state for the sheet
+    child: StatefulBuilder(
       builder: (ctx, setLocalState) {
         return Padding(
           padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom, // use ctx
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
           ),
           child: SizedBox(
             height: 560,
             child: Column(
               children: [
-                // added search field
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                   child: TextField(
@@ -151,9 +137,7 @@ Widget _exercisePicker(BuildContext parentContext) {
                   ),
                 ),
 
-                // List driven by Riverpod state + search filter
                 Expanded(
-                  // Use allExercisesAsync.when() to handle loading/error states
                   child: allExercisesAsync.when(
                     loading: () => const Center(child: CircularProgressIndicator()),
                     error: (err, stack) => Center(child: Text('Error loading exercises: $err')),
@@ -238,7 +222,6 @@ Widget _exercisePicker(BuildContext parentContext) {
 
 }
 
-// small custom chip so users can see which ones are their created templates
 class _CustomTag extends StatelessWidget {
   const _CustomTag();
 

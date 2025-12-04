@@ -1,11 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Import Auth
 import 'workout_log.dart';
 import 'workout_service.dart';
-import '../../content.dart';
+import '../../content.dart'; 
+// this stream tracks who is logged in.
+final authStateProvider = StreamProvider<User?>((ref) {
+  return FirebaseAuth.instance.authStateChanges();
+});
 
 final workoutLogsProvider = StreamProvider<List<WorkoutLog>>((ref) {
+  ref.watch(authStateProvider);
+  
   return WorkoutService.streamWorkouts();
 });
+
 class WorkoutController {
   final Ref ref;
   WorkoutController(this.ref);
@@ -21,6 +29,7 @@ class WorkoutController {
 
 final workoutControllerProvider = Provider((ref) => WorkoutController(ref));
 
+
 final muscleWorkByDayProvider = Provider<Map<DateTime, Map<String, int>>>((ref) {
   final workoutsAsync = ref.watch(workoutLogsProvider);
   
@@ -35,7 +44,7 @@ final muscleWorkByDayProvider = Provider<Map<DateTime, Map<String, int>>>((ref) 
         result.putIfAbsent(dayKey, () => {});
 
         for (final rawMuscle in w.muscles) {
-          final group = muscleToGroup[rawMuscle]; // from content.dart
+          final group = muscleToGroup[rawMuscle]; 
           if (group == null) continue;
           
           result[dayKey]![group] = (result[dayKey]![group] ?? 0) + 1;

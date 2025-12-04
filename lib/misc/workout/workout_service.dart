@@ -11,12 +11,32 @@ class WorkoutService {
   static String get _uid => FirebaseAuth.instance.currentUser?.uid ?? '';
   
   static const String _boxName = 'workouts'; 
+
+  static StreamSubscription<QuerySnapshot>? _remoteSubscription;
+  static StreamSubscription<User?>? _authSubscription;
+
   static Box<WorkoutLog> get _box => Hive.box<WorkoutLog>(_boxName);
+
+  static void monitorAuthState() {
+    _authSubscription?.cancel();
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (user != null) {
+        // logged in, start syncing
+        syncPendingWorkouts();
+        startListeningToRemoteChanges();
+      } else {
+        // when logged uut, stop syncing and clear local data for privacy
+        _remoteSubscription?.cancel();
+      }
+    });
+  }
+
   static Future<void> saveWorkout(WorkoutLog log) async {
     final String id = log.id ?? const Uuid().v4();
     
     final localLog = log.copyWith(
       id: id,
+      uid: _uid, 
       syncStatus: 'pending',
       updatedAt: DateTime.now().millisecondsSinceEpoch,
     );
@@ -24,6 +44,7 @@ class WorkoutService {
     await _box.put(id, localLog);
     _syncToFirebase(localLog);
   }
+
   static Future<void> _syncToFirebase(WorkoutLog log) async {
     if (_uid.isEmpty) return;
 
@@ -34,30 +55,77 @@ class WorkoutService {
           .collection('workouts')
           .doc(log.id)
           .set(log.toMap());
+
       if (_box.containsKey(log.id)) {
         final syncedLog = log.copyWith(syncStatus: 'synced');
         await _box.put(log.id, syncedLog);
       }
-      
     } catch (e) {
       print("Offline: Data saved locally. Sync failed: $e");
     }
   }
+
   static Future<void> syncPendingWorkouts() async {
     if (_uid.isEmpty) return;
     
-    final pendingLogs = _box.values.where((l) => l.syncStatus == 'pending');
+    final pendingLogs = _box.values.where((l) => l.syncStatus == 'pending' && l.uid == _uid);
     for (final log in pendingLogs) {
       await _syncToFirebase(log);
     }
   }
+
+  static void startListeningToRemoteChanges() {
+    if (_uid.isEmpty) return;
+
+    _remoteSubscription?.cancel();
+
+    _remoteSubscription = _db
+        .collection('users')
+        .doc(_uid)
+        .collection('workouts')
+        .snapshots()
+        .listen((snapshot) {
+      
+      for (final docChange in snapshot.docChanges) {
+        final doc = docChange.doc;
+        
+        if (docChange.type == DocumentChangeType.removed) {
+           final localLog = _box.get(doc.id);
+           if (localLog?.syncStatus != 'pending') {
+             _box.delete(doc.id);
+           }
+           continue;
+        }
+
+        final data = doc.data();
+        if (data == null) continue;
+
+        var remoteLog = WorkoutLog.fromMap(data, id: doc.id);
+        if (remoteLog.uid.isEmpty) {
+          remoteLog = remoteLog.copyWith(uid: _uid);
+        }
+
+        final localLog = _box.get(remoteLog.id);
+
+        if (localLog == null || localLog.syncStatus != 'pending') {
+          final logToSave = remoteLog.copyWith(syncStatus: 'synced');
+          _box.put(remoteLog.id, logToSave);
+        }
+      }
+    });
+  }
+
   static Stream<List<WorkoutLog>> streamWorkouts() async* {
-    final initial = _box.values.toList();
+    List<WorkoutLog> getMyWorkouts() {
+      return _box.values.where((w) => w.uid == _uid).toList();
+    }
+
+    final initial = getMyWorkouts();
     initial.sort((a, b) => b.when.compareTo(a.when));
     yield initial;
 
     await for (final _ in _box.watch()) {
-      final updated = _box.values.toList();
+      final updated = getMyWorkouts();
       updated.sort((a, b) => b.when.compareTo(a.when));
       yield updated;
     }
