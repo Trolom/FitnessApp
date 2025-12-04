@@ -3,7 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 // this file will be generated automatically when we run the build command
 part 'workout_log.g.dart'; 
 
-@HiveType(typeId: 2)
+@HiveType(typeId: 10)
 class WorkoutLog extends HiveObject {
   
   @HiveField(0)
@@ -30,15 +30,14 @@ class WorkoutLog extends HiveObject {
   @HiveField(7)
   final List<String> muscles;
 
-  // --- NEW FIELDS FOR OFFLINE-FIRST (Matching Template.dart) ---
   @HiveField(8)
   final String syncStatus; // 'synced', 'pending', 'error'
   
   @HiveField(9)
-  final int updatedAt;     // Timestamp for conflict resolution
+  final int updatedAt;
   
   @HiveField(10)
-  final bool isDeleted;    // Soft delete flag
+  final bool isDeleted;
 
   WorkoutLog({
     this.id,

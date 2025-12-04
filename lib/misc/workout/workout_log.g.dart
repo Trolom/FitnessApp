@@ -8,7 +8,7 @@ part of 'workout_log.dart';
 
 class WorkoutLogAdapter extends TypeAdapter<WorkoutLog> {
   @override
-  final int typeId = 2;
+  final int typeId = 10;
 
   @override
   WorkoutLog read(BinaryReader reader) {

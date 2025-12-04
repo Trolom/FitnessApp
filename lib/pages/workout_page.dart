@@ -277,9 +277,7 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
             // Sync status will be handled by the provider (defaults to 'pending')
           );
 
-          // --- CHANGE: USE THE OFFLINE-FIRST PROVIDER ---
-          await ref.read(workoutLogsProvider.notifier).addLog(log);
-          
+          await ref.read(workoutControllerProvider).addLog(log);
           if (!mounted) return;
           Navigator.of(context).pop();
 

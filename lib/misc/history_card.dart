@@ -3,7 +3,7 @@ import 'workout/workout_log.dart';
 
 class HistoryCard extends StatelessWidget {
   final WorkoutLog w;
-  const HistoryCard({required this.w});
+  const HistoryCard({super.key, required this.w});
 
   String _fmtDateTime(DateTime d) {
     const weekdays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -26,11 +26,22 @@ class HistoryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
-          Text(
-            w.title,
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+          
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  w.title,
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                ),
+              ),
+              const SizedBox(width: 8),
+              _buildSyncStatus(context),
+            ],
           ),
+          
           const SizedBox(height: 2),
 
           Text(
@@ -72,6 +83,22 @@ class HistoryCard extends StatelessWidget {
     );
   }
 
+  Widget _buildSyncStatus(BuildContext context) {
+    if (w.syncStatus == 'pending') {
+      // offline or Waiting to upload
+      return const Tooltip(
+        message: 'Saved locally. Waiting for internet...',
+        child: Icon(Icons.cloud_upload_outlined, color: Colors.orange, size: 20),
+      );
+    } else if (w.syncStatus == 'synced') {
+      // uccessfully uploaded
+      return Icon(Icons.check_circle_outline, color: Theme.of(context).colorScheme.primary, size: 20);
+    } else {
+      // error state
+      return const Icon(Icons.error_outline, color: Colors.red, size: 20);
+    }
+  }
+
   String _compactNumber(int n) {
     if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
     if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}k';
@@ -98,10 +125,4 @@ class _LabeledBlock extends StatelessWidget {
       ],
     );
   }
-}
-
-class MonthGroup {
-  final String label;
-  final List<WorkoutLog> items;
-  const MonthGroup({required this.label, required this.items});
 }
