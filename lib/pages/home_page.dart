@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../misc/template/template_card.dart';
-// import '../misc/template/template_service.dart'; // NO LONGER DIRECTLY USED
 import '../misc/template/template_providers.dart';
 import 'create_template_page.dart';
 import '../../charts/calories_chart.dart';

@@ -104,7 +104,7 @@ const kMuscleOptions = <String>[
 List<Template> baseTemplates = [
   Template(
     name: 'Push Day (Hypertrophy)',
-    uid: 'system', // <--- ADD THIS
+    uid: 'system',
     exercises: [
       ExerciseBlock(
         name: 'Flat Bench Press',
@@ -141,7 +141,7 @@ List<Template> baseTemplates = [
 
   Template(
     name: 'Pull Day (Strength)',
-    uid: 'system', // <--- ADD THIS
+    uid: 'system',
     exercises: [
       ExerciseBlock(
         name: 'Deadlift',
@@ -172,7 +172,6 @@ List<Template> baseTemplates = [
 
   Template(
     name: 'Legs + Core',
-    //added this
     uid: 'system',
     exercises: [
       ExerciseBlock(

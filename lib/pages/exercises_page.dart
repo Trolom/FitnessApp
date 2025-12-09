@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../misc/exercise/exercise.dart';
-import '../content.dart'; // baseExercises (Now accessed via Provider), now just for kMuscleOptions
+import '../content.dart';
 // import '../misc/exercise_service.dart'; // Firestore access (Now accessed via Sync Manager)
-import '../misc/exercise/exercise_providers.dart'; // NEW: Riverpod State and Sync Logic
+import '../misc/exercise/exercise_providers.dart';
 
 
 class ExercisesPage extends ConsumerStatefulWidget {
