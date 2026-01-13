@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart'; // Change to BLoC
 
 import '../misc/exercise/exercise.dart';
 import '../content.dart';
-// import '../misc/exercise_service.dart'; // Firestore access (Now accessed via Sync Manager)
-import '../misc/exercise/exercise_providers.dart';
+import '../misc/exercise/exercise_bloc.dart';
+import '../misc/exercise/exercise_event.dart';
+import '../misc/exercise/exercise_state.dart';
 
-
-class ExercisesPage extends ConsumerStatefulWidget {
+// 1. Change to standard StatefulWidget
+class ExercisesPage extends StatefulWidget {
   const ExercisesPage({super.key});
 
   @override
-  ConsumerState<ExercisesPage> createState() => _ExercisesPageState();
+  State<ExercisesPage> createState() => _ExercisesPageState();
 }
 
-class _ExercisesPageState extends ConsumerState<ExercisesPage> {
+class _ExercisesPageState extends State<ExercisesPage> {
   final _searchCtrl = TextEditingController();
 
   @override
@@ -25,18 +26,22 @@ class _ExercisesPageState extends ConsumerState<ExercisesPage> {
 
   @override
   Widget build(BuildContext context) {
-    // WATCH: Use ref.watch to listen to the combined local/base exercise list
-    final allExercisesAsync = ref.watch(allExercisesProvider);
-
     return Scaffold(
       appBar: AppBar(title: const Text('Exercises')),
+      
+      // 2. Use BlocBuilder instead of allExercisesAsync.when
+      body: BlocBuilder<ExerciseBloc, ExerciseState>(
+        builder: (context, state) {
+          if (state.status == ExerciseStatus.loading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          
+          if (state.status == ExerciseStatus.error) {
+            return Center(child: Text('Error: ${state.errorMessage}'));
+          }
 
-      // CHANGE: Use allExercisesAsync.when() instead of StreamBuilder
-      body: allExercisesAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error loading exercises: $err')),
-        data: (all) {
           final query = _searchCtrl.text.trim().toLowerCase();
+          final all = state.allExercises;
 
           final filtered = all.where((ex) {
             return query.isEmpty ||
@@ -61,19 +66,15 @@ class _ExercisesPageState extends ConsumerState<ExercisesPage> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 8),
-
               Expanded(
                 child: filtered.isEmpty
                     ? const _EmptyState()
                     : ListView.separated(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                         itemCount: filtered.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: 8),
-                        itemBuilder: (_, i) =>
-                            _ExerciseTile(ex: filtered[i]),
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (_, i) => _ExerciseTile(ex: filtered[i]),
                       ),
               ),
             ],
@@ -82,7 +83,7 @@ class _ExercisesPageState extends ConsumerState<ExercisesPage> {
       ),
 
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openAddDialog(context, ref),
+        onPressed: () => _openAddDialog(context),
         icon: const Icon(Icons.add),
         label: const Text('Add'),
       ),
@@ -91,16 +92,17 @@ class _ExercisesPageState extends ConsumerState<ExercisesPage> {
 
   // ---------------- ADD CUSTOM EXERCISE ----------------
 
-  void _openAddDialog(BuildContext context, WidgetRef ref) {
+  void _openAddDialog(BuildContext context) {
     final nameCtrl = TextEditingController();
     final setsCtrl = TextEditingController();
     final repsCtrl = TextEditingController();
 
     String unit = 'reps';
     final Set<String> selectedMuscles = { kMuscleOptions.first }; 
+    
     showDialog(
       context: context,
-      builder: (_) {
+      builder: (dialogCtx) { // Use a specific context for the dialog
         return StatefulBuilder( 
           builder: (ctx, setLocalState) {
             return AlertDialog(
@@ -112,7 +114,7 @@ class _ExercisesPageState extends ConsumerState<ExercisesPage> {
                       controller: nameCtrl,
                       decoration: const InputDecoration(labelText: 'Name'),
                     ),
-
+                    // ... (Muscle groups section remains identical to your original code)
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Padding(
@@ -153,10 +155,7 @@ class _ExercisesPageState extends ConsumerState<ExercisesPage> {
                                     ),
                                   ),
                                   actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(ctx),
-                                      child: const Text('Cancel'),
-                                    ),
+                                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
                                     FilledButton(
                                       onPressed: () {
                                         if (temp.isEmpty) temp.add(kMuscleOptions.first);
@@ -170,26 +169,11 @@ class _ExercisesPageState extends ConsumerState<ExercisesPage> {
                             );
                           },
                         );
-
-                        if (result != null) {
-                          setLocalState(() {
-                            selectedMuscles
-                              ..clear()
-                              ..addAll(result);
-                          });
-                        }
+                        if (result != null) setLocalState(() => selectedMuscles..clear()..addAll(result));
                       },
                       child: InputDecorator(
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        ),
-                        child: Text(
-                          selectedMuscles.join(' • '),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
+                        child: Text(selectedMuscles.join(' • ')),
                       ),
                     ),
                     
@@ -203,9 +187,7 @@ class _ExercisesPageState extends ConsumerState<ExercisesPage> {
                       decoration: const InputDecoration(labelText: 'Reps / Seconds'),
                       keyboardType: TextInputType.number,
                     ),
-
                     const SizedBox(height: 10),
-
                     DropdownButton<String>(
                       value: unit,
                       items: const [
@@ -218,13 +200,10 @@ class _ExercisesPageState extends ConsumerState<ExercisesPage> {
                 ),
               ),
               actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
                 FilledButton(
                   child: const Text('Save'),
-                  onPressed: () async {
+                  onPressed: () {
                     final newEx = Exercise(
                       name: nameCtrl.text.trim(),
                       muscles: selectedMuscles.join(' • '),
@@ -234,12 +213,10 @@ class _ExercisesPageState extends ConsumerState<ExercisesPage> {
                       isCustom: true,
                     );
                     
-                    // CRITICAL CHANGE: We use the Riverpod Notifier to add the exercise.
-                    await ref.read(customExercisesProvider.notifier).add(newEx);
+                    // 3. CRITICAL CHANGE: Dispatch event to BLoC
+                    context.read<ExerciseBloc>().add(AddExerciseEvent(newEx));
                     
-                    // OLD: await ExerciseService.uploadExercise(ex); 
-                    
-                    if (mounted) Navigator.pop(context);
+                    Navigator.pop(context);
                   },
                 ),
               ],
@@ -252,7 +229,6 @@ class _ExercisesPageState extends ConsumerState<ExercisesPage> {
 }
 
 // -------------------------- UI COMPONENTS --------------------------
-// The ExerciseTile needs to be updated to show the sync status (pending cloud)
 
 class _ExerciseTile extends StatelessWidget {
   final Exercise ex;
@@ -268,33 +244,16 @@ class _ExerciseTile extends StatelessWidget {
         border: Border.all(color: scheme.outlineVariant),
       ),
       child: ListTile(
-        leading: CircleAvatar(
-          child: Text(ex.name[0]),
-        ),
-
+        leading: CircleAvatar(child: Text(ex.name[0])),
         title: Row(
           children: [
-            Text(ex.name,
-                style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text(ex.name, style: const TextStyle(fontWeight: FontWeight.w600)),
             if (ex.isCustom) ...[
               const SizedBox(width: 6),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: scheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Text(
-                  "Custom",
-                  style: TextStyle(fontSize: 10),
-                ),
-              )
+              _StatusTag(label: "Custom", color: scheme.primaryContainer),
             ],
-            // NEW: Display sync status indicator
             if (ex.syncStatus == 'pending') ...[
               const SizedBox(width: 6),
-              // Cloud icon indicates it is saved locally but waiting to sync
               const Icon(Icons.cloud_upload_outlined, size: 16, color: Colors.orange), 
             ],
             if (ex.syncStatus == 'error') ...[
@@ -303,52 +262,33 @@ class _ExerciseTile extends StatelessWidget {
             ],
           ],
         ),
-
         subtitle: Text(ex.muscles),
-
         trailing: Text(
-          ex.unit == 'sec'
-              ? '${ex.reps} sec'
-              : '${ex.sets}×${ex.reps}',
+          ex.unit == 'sec' ? '${ex.reps} sec' : '${ex.sets}×${ex.reps}',
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
-
-        onTap: () => _openDetails(context),
+        onTap: () => _showDetails(context),
       ),
     );
   }
 
-  void _openDetails(BuildContext context) {
-    // ... (rest of _openDetails remains the same)
-    showModalBottomSheet(
+  void _showDetails(BuildContext context) {
+     showModalBottomSheet(
       context: context,
       showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (_) => Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(ex.name,
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-
+            Text(ex.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
             const SizedBox(height: 6),
             Text(ex.muscles),
-
             const SizedBox(height: 12),
-            Text(
-              ex.unit == 'sec'
-                  ? '${ex.reps} seconds'
-                  : '${ex.sets} sets × ${ex.reps} reps',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-
+            Text(ex.unit == 'sec' ? '${ex.reps} seconds' : '${ex.sets} sets × ${ex.reps} reps',
+              style: const TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 16),
             Align(
               alignment: Alignment.centerRight,
@@ -365,22 +305,33 @@ class _ExerciseTile extends StatelessWidget {
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+class _StatusTag extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _StatusTag({required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(6)),
+      child: Text(label, style: const TextStyle(fontSize: 10)),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState();
+  @override
+  Widget build(BuildContext context) {
     return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.search_off, size: 48),
-            SizedBox(height: 8),
-            Text("No exercises found."),
-          ],
-        ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.search_off, size: 48),
+          SizedBox(height: 8),
+          Text("No exercises found."),
+        ],
       ),
     );
   }

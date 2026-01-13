@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../misc/template/template.dart';
-import '../misc/template/template_providers.dart';
-import '../misc/exercise/exercise_providers.dart'; 
+import '../misc/template/template_bloc.dart';
+import '../misc/template/template_event.dart';
+import '../misc/exercise/exercise_bloc.dart';
 import '../misc/exercise/exercise_block.dart'; 
+import '../misc/exercise/exercise_state.dart';
 
-class CreateTemplatePage extends ConsumerStatefulWidget {
+class CreateTemplatePage extends StatefulWidget {
   const CreateTemplatePage({super.key});
 
   @override
-  ConsumerState<CreateTemplatePage> createState() => _CreateTemplatePageState();
+  State<CreateTemplatePage> createState() => _CreateTemplatePageState();
 }
 
-class _CreateTemplatePageState extends ConsumerState<CreateTemplatePage> {
+class _CreateTemplatePageState extends State<CreateTemplatePage> {
   final _nameCtrl = TextEditingController();
   final List<ExerciseBlock> _blocks = [];
 
@@ -27,12 +29,10 @@ class _CreateTemplatePageState extends ConsumerState<CreateTemplatePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Create Template")),
-
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-
             TextField(
               controller: _nameCtrl,
               decoration: const InputDecoration(
@@ -40,17 +40,14 @@ class _CreateTemplatePageState extends ConsumerState<CreateTemplatePage> {
                 border: OutlineInputBorder(),
               ),
             ),
-
             const SizedBox(height: 20),
-
             Expanded(
               child: ListView(
                 children: [
                   const Text("Add exercises:", style: TextStyle(fontSize: 16)),
-
                   ..._blocks.map((b) => ListTile(
                         title: Text(b.name),
-                        subtitle: Text("${b.sets} sets × ${b.reps} reps"),
+                        subtitle: Text("${b.sets} sets x ${b.reps} reps"),
                         trailing: IconButton(
                           icon: const Icon(Icons.delete),
                           onPressed: () {
@@ -61,7 +58,6 @@ class _CreateTemplatePageState extends ConsumerState<CreateTemplatePage> {
                 ],
               ),
             ),
-
             FilledButton.icon(
               onPressed: () {
                 showModalBottomSheet(
@@ -73,9 +69,7 @@ class _CreateTemplatePageState extends ConsumerState<CreateTemplatePage> {
               icon: const Icon(Icons.add),
               label: const Text("Add Exercise"),
             ),
-
             const SizedBox(height: 16),
-
             FilledButton(
               onPressed: () async {
                 if (_nameCtrl.text.trim().isEmpty || _blocks.isEmpty) {
@@ -90,7 +84,8 @@ class _CreateTemplatePageState extends ConsumerState<CreateTemplatePage> {
                   isCustom: true,
                   uid: '', 
                 );
-                await ref.read(templateControllerProvider).add(tpl);
+                
+                context.read<TemplateBloc>().add(AddTemplateEvent(tpl));
 
                 if (context.mounted) Navigator.pop(context);
               },
@@ -102,124 +97,128 @@ class _CreateTemplatePageState extends ConsumerState<CreateTemplatePage> {
     );
   }
 
+  Widget _exercisePicker(BuildContext parentContext) {
+    final qCtrl = TextEditingController(); 
+    String query = '';                      
 
-Widget _exercisePicker(BuildContext parentContext) {
-  final qCtrl = TextEditingController(); 
-  String query = '';                      
-
-  final allExercisesAsync = ref.watch(allExercisesProvider);
-
-  return SafeArea(
-    child: StatefulBuilder(
-      builder: (ctx, setLocalState) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom,
-          ),
-          child: SizedBox(
-            height: 560,
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  child: TextField(
-                    controller: qCtrl,
-                    onChanged: (v) =>
-                        setLocalState(() => query = v.trim().toLowerCase()),
-                    decoration: InputDecoration(
-                      hintText: 'Search exercises (name or muscles)',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+    return SafeArea(
+      child: StatefulBuilder(
+        builder: (ctx, setLocalState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom,
+            ),
+            child: SizedBox(
+              height: 560,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                    child: TextField(
+                      controller: qCtrl,
+                      onChanged: (v) =>
+                          setLocalState(() => query = v.trim().toLowerCase()),
+                      decoration: InputDecoration(
+                        hintText: 'Search exercises (name or muscles)',
+                        prefixIcon: const Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        isDense: true,
                       ),
-                      isDense: true,
                     ),
                   ),
-                ),
 
-                Expanded(
-                  child: allExercisesAsync.when(
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (err, stack) => Center(child: Text('Error loading exercises: $err')),
-                    data: (all) {
-                      
-                      final filtered = query.isEmpty
-                          ? all
-                          : all.where((ex) {
-                              final n = ex.name.toLowerCase();
-                              final m = ex.muscles.toLowerCase();
-                              return n.contains(query) || m.contains(query);
-                            }).toList()
-                            ..sort((a, b) =>
-                              a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+                  Expanded(
+                    // 2. Replaced ref.watch with BlocBuilder
+                    child: BlocBuilder<ExerciseBloc, ExerciseState>(
+                      builder: (context, state) {
+                        if (state.status == ExerciseStatus.loading) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        
+                        if (state.status == ExerciseStatus.error) {
+                          return Center(child: Text('Error: ${state.errorMessage}'));
+                        }
 
-                      if (filtered.isEmpty) {
-                        return const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(24),
-                            child: Text('No matches. Try another search.'),
-                          ),
-                        );
-                      }
+                        final all = state.allExercises;
+                        
+                        final filtered = query.isEmpty
+                            ? all
+                            : all.where((ex) {
+                                final n = ex.name.toLowerCase();
+                                final m = ex.muscles.toLowerCase();
+                                return n.contains(query) || m.contains(query);
+                              }).toList()
+                              ..sort((a, b) =>
+                                a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
-                      return ListView.separated(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: filtered.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1),
-                        itemBuilder: (_, i) {
-                          final ex = filtered[i];
-                          return ListTile(
-                            title: Row(
-                              children: [
-                                Text(ex.name),
-                                if (ex.isCustom) ...[
-                                  const SizedBox(width: 8),
-                                  const _CustomTag(),
-                                ],
-                              ],
+                        if (filtered.isEmpty) {
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(24),
+                              child: Text('No matches. Try another search.'),
                             ),
-                            subtitle: Text(ex.muscles),
-                            trailing: Text(
-                              ex.unit == 'sec'
-                                  ? '${ex.reps} sec'
-                                  : '${ex.sets}×${ex.reps}',
-                              style: const TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                            onTap: () {
-                              final muscleList = ex.muscles
-                                  .split('•')
-                                  .map((m) => m.trim())
-                                  .where((m) => m.isNotEmpty)
-                                  .toList();
-
-                              setState(() {
-                                _blocks.add(
-                                  ExerciseBlock(
-                                    name: ex.name,
-                                    sets: ex.sets,
-                                    reps: ex.reps,
-                                    muscles: muscleList,
-                                  ),
-                                );
-                              });
-
-                              Navigator.pop(ctx);
-                            },
                           );
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    ),
-  );
-}
+                        }
 
+                        return ListView.separated(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          itemBuilder: (_, i) {
+                            final ex = filtered[i];
+                            return ListTile(
+                              title: Row(
+                                children: [
+                                  Text(ex.name),
+                                  if (ex.isCustom) ...[
+                                    const SizedBox(width: 8),
+                                    const _CustomTag(),
+                                  ],
+                                ],
+                              ),
+                              subtitle: Text(ex.muscles),
+                              trailing: Text(
+                                ex.unit == 'sec'
+                                    ? '${ex.reps} sec'
+                                    : '${ex.sets}×${ex.reps}',
+                                style: const TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                              onTap: () {
+                                final muscleList = ex.muscles
+                                    .split('•')
+                                    .map((m) => m.trim())
+                                    .where((m) => m.isNotEmpty)
+                                    .toList();
+
+                                setState(() {
+                                  _blocks.add(
+                                    ExerciseBlock(
+                                      name: ex.name,
+                                      sets: ex.sets,
+                                      reps: ex.reps,
+                                      muscles: muscleList,
+                                    ),
+                                  );
+                                });
+
+                                Navigator.pop(ctx);
+                              },
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
 class _CustomTag extends StatelessWidget {

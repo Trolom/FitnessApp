@@ -1,29 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart'; // Change to BLoC
+
 import '../misc/template/template_card.dart';
-import '../misc/template/template_providers.dart';
+import '../misc/template/template_bloc.dart';   // Import Template BLoC
+import '../misc/template/template_state.dart';  // Import Template State
 import 'create_template_page.dart';
 import '../../charts/calories_chart.dart';
 import '../../charts/muscle_groups_chart.dart';
 import '../../charts/body_tracker_chart.dart';
 
-
-class HomePage extends ConsumerWidget {
+// 1. Change to StatelessWidget
+class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) { // ADD WidgetRef ref
-    
-    // WATCH: Listen to the merged list of templates (Base + Custom from Hive)
-    final allTemplatesAsync = ref.watch(allTemplatesProvider);
-
+  Widget build(BuildContext context) {
     return SafeArea(
       child: CustomScrollView(
         slivers: [
-          SliverAppBar(
+          const SliverAppBar(
             floating: true,
             snap: true,
-            title: const Text('Dashboard'),
+            title: Text('Dashboard'),
           ),
 
           SliverPadding(
@@ -31,56 +29,12 @@ class HomePage extends ConsumerWidget {
             sliver: SliverList(
               delegate: SliverChildListDelegate(
                 [
-
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text('Calories (last 7 days)',
-                              style: TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.w600)),
-                          SizedBox(height: 12),
-                          SizedBox(height: 180, child: CaloriesChart()),
-                        ],
-                      ),
-                    ),
-                  ),
+                  // --- DASHBOARD CHARTS ---
+                  _buildChartCard('Calories (last 7 days)', const CaloriesChart()),
                   const SizedBox(height: 12),
-
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text('Muscle Groups',
-                              style: TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.w600)),
-                          SizedBox(height: 12),
-                          SizedBox(height: 180, child: MuscleGroupsChart()),
-                        ],
-                      ),
-                    ),
-                  ),
+                  _buildChartCard('Muscle Groups', const MuscleGroupsChart()),
                   const SizedBox(height: 12),
-
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text('Body Tracker',
-                              style: TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.w600)),
-                          SizedBox(height: 12),
-                          SizedBox(height: 180, child: BodyTrackerChart()),
-                        ],
-                      ),
-                    ),
-                  ),
+                  _buildChartCard('Body Tracker', const BodyTrackerChart()),
 
                   const SizedBox(height: 24),
 
@@ -108,14 +62,25 @@ class HomePage extends ConsumerWidget {
                     ),
                   ),
 
-                  allTemplatesAsync.when(
-                    loading: () => const Center(child: Padding(
-                      padding: EdgeInsets.all(20),
-                      child: CircularProgressIndicator(),
-                    )),
-                    error: (err, stack) => Center(child: Text('Error loading templates: $err')),
-                    data: (allTemplates) {
-                      
+                  // 2. Replaced allTemplatesAsync.when with BlocBuilder
+                  BlocBuilder<TemplateBloc, TemplateState>(
+                    builder: (context, state) {
+                      if (state.status == TemplateStatus.loading) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(20),
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      }
+
+                      if (state.status == TemplateStatus.error) {
+                        return Center(
+                          child: Text('Error loading templates: ${state.errorMessage}'),
+                        );
+                      }
+
+                      final allTemplates = state.allTemplates;
                       final baseTemplatesList = allTemplates.where((t) => !t.isCustom).toList();
                       final userTemplatesList = allTemplates.where((t) => t.isCustom).toList();
                       
@@ -130,11 +95,9 @@ class HomePage extends ConsumerWidget {
                             ),
                           ),
                           
-                          const SizedBox(height: 8),
-                          
                           // ----- USER TEMPLATES -----
                           if (userTemplatesList.isNotEmpty) ...[
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 20),
                             const Text(
                               'Your Templates',
                               style: TextStyle(
@@ -158,6 +121,24 @@ class HomePage extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // Helper method to keep the chart code clean
+  Widget _buildChartCard(String title, Widget chart) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 12),
+            SizedBox(height: 180, child: chart),
+          ],
+        ),
       ),
     );
   }

@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart'; // Change to BLoC
 import 'template.dart';
+import 'template_bloc.dart';
+import 'template_event.dart';
 import '../../pages/workout_page.dart';
-import 'template_providers.dart'; 
 
-class TemplateCard extends ConsumerWidget {
+class TemplateCard extends StatelessWidget { // Changed to StatelessWidget
   final Template template;
   const TemplateCard({super.key, required this.template});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -24,8 +25,6 @@ class TemplateCard extends ConsumerWidget {
                     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                 ),
-
-                // Show delete only for usercreated templates
                 if (template.isCustom && template.id != null) ...[
                   IconButton(
                     tooltip: 'Delete template',
@@ -50,8 +49,8 @@ class TemplateCard extends ConsumerWidget {
                       );
 
                       if (ok == true) {
-                        // used controller to delete
-                        await ref.read(templateControllerProvider).delete(template.id!);
+                        // Use BLoC to delete
+                        context.read<TemplateBloc>().add(DeleteTemplateEvent(template.id!));
                         
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -63,7 +62,6 @@ class TemplateCard extends ConsumerWidget {
                   ),
                   const SizedBox(width: 8),
                 ],
-
                 FilledButton(
                   onPressed: () {
                     Navigator.of(context).push(
@@ -76,7 +74,6 @@ class TemplateCard extends ConsumerWidget {
                 ),
               ],
             ),
-            
             const SizedBox(height: 8),
             ...template.exercises.take(3).map((e) => Padding(
               padding: const EdgeInsets.only(bottom: 4),
