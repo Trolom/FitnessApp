@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart'; // Change to BLoC
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../misc/exercise/exercise.dart';
 import '../content.dart';
@@ -7,7 +7,6 @@ import '../misc/exercise/exercise_bloc.dart';
 import '../misc/exercise/exercise_event.dart';
 import '../misc/exercise/exercise_state.dart';
 
-// 1. Change to standard StatefulWidget
 class ExercisesPage extends StatefulWidget {
   const ExercisesPage({super.key});
 
@@ -29,7 +28,6 @@ class _ExercisesPageState extends State<ExercisesPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Exercises')),
       
-      // 2. Use BlocBuilder instead of allExercisesAsync.when
       body: BlocBuilder<ExerciseBloc, ExerciseState>(
         builder: (context, state) {
           if (state.status == ExerciseStatus.loading) {
@@ -102,7 +100,7 @@ class _ExercisesPageState extends State<ExercisesPage> {
     
     showDialog(
       context: context,
-      builder: (dialogCtx) { // Use a specific context for the dialog
+      builder: (dialogCtx) { 
         return StatefulBuilder( 
           builder: (ctx, setLocalState) {
             return AlertDialog(
@@ -114,7 +112,6 @@ class _ExercisesPageState extends State<ExercisesPage> {
                       controller: nameCtrl,
                       decoration: const InputDecoration(labelText: 'Name'),
                     ),
-                    // ... (Muscle groups section remains identical to your original code)
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Padding(
@@ -213,7 +210,6 @@ class _ExercisesPageState extends State<ExercisesPage> {
                       isCustom: true,
                     );
                     
-                    // 3. CRITICAL CHANGE: Dispatch event to BLoC
                     context.read<ExerciseBloc>().add(AddExerciseEvent(newEx));
                     
                     Navigator.pop(context);

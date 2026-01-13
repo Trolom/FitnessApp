@@ -6,21 +6,19 @@ import 'exercise.dart';
 import 'exercise_event.dart';
 import 'exercise_state.dart';
 import 'exercise_service.dart';
-import '../../local_db.dart'; // Ensure path is correct
-import '../../content.dart';  // Ensure path is correct for baseExercises
+import '../../local_db.dart'; 
+import '../../content.dart';  
 
 class ExerciseBloc extends Bloc<ExerciseEvent, ExerciseState> {
   final _uuid = const Uuid();
   StreamSubscription? _remoteSubscription;
 
   ExerciseBloc() : super(ExerciseState()) {
-    // Register Event Handlers
     on<LoadExercisesEvent>(_onLoadExercises);
     on<AddExerciseEvent>(_onAddExercise);
     on<SyncRemoteUpdatesEvent>(_onSyncRemoteUpdates);
     on<TriggerSyncNowEvent>(_onTriggerSyncNow);
 
-    // Replacement for SyncManager: Listen to Firebase stream immediately
     _remoteSubscription = ExerciseService.downloadUserExercisesStream().listen(
       (remoteList) => add(SyncRemoteUpdatesEvent(remoteList)),
     );
@@ -50,7 +48,6 @@ class ExerciseBloc extends Bloc<ExerciseEvent, ExerciseState> {
       updatedAt: DateTime.now().millisecondsSinceEpoch,
     );
 
-    // Update Local DB
     await localDbService.saveExercise(newLocalEx);
 
     // Update UI State
@@ -60,7 +57,6 @@ class ExerciseBloc extends Bloc<ExerciseEvent, ExerciseState> {
       allExercises: [...baseExercises, ...updatedCustom],
     ));
 
-    // Trigger background sync
     add(TriggerSyncNowEvent());
   }
 

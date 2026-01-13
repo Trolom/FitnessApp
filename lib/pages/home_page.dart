@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart'; // Change to BLoC
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../misc/template/template_card.dart';
-import '../misc/template/template_bloc.dart';   // Import Template BLoC
-import '../misc/template/template_state.dart';  // Import Template State
+import '../misc/template/template_bloc.dart';  
+import '../misc/template/template_state.dart';
 import 'create_template_page.dart';
 import '../../charts/calories_chart.dart';
 import '../../charts/muscle_groups_chart.dart';
 import '../../charts/body_tracker_chart.dart';
 
-// 1. Change to StatelessWidget
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
@@ -62,7 +61,6 @@ class HomePage extends StatelessWidget {
                     ),
                   ),
 
-                  // 2. Replaced allTemplatesAsync.when with BlocBuilder
                   BlocBuilder<TemplateBloc, TemplateState>(
                     builder: (context, state) {
                       if (state.status == TemplateStatus.loading) {

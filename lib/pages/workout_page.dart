@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../misc/template/template.dart';
 import '../misc/workout/workout_log.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../misc/workout/workout_providers.dart';
+import '../misc/workout/workout_bloc.dart';
+import '../misc/workout/workout_event.dart';
 
 class WorkoutSet {
   double? kg;
@@ -18,16 +19,15 @@ class WorkoutExercise {
   WorkoutExercise({required this.name, required this.sets});
 }
 
-// Changed to ConsumerStatefulWidget to access "ref"
-class WorkoutPage extends ConsumerStatefulWidget {
+class WorkoutPage extends StatefulWidget {
   final Template template;
   const WorkoutPage({super.key, required this.template});
 
   @override
-  ConsumerState<WorkoutPage> createState() => _WorkoutPageState();
+  State<WorkoutPage> createState() => _WorkoutPageState();
 }
 
-class _WorkoutPageState extends ConsumerState<WorkoutPage> {
+class _WorkoutPageState extends State<WorkoutPage> {
   late List<WorkoutExercise> _items;
   late Stopwatch _stopwatch;
   Timer? _ticker;
@@ -47,7 +47,6 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
   String _findBestSet() {
     double best = 0;
     String desc = "-";
-
     for (var ex in _items) {
       for (var s in ex.sets) {
         if (s.kg != null && s.reps != null) {
@@ -63,36 +62,27 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
   }
 
   String _shortSummary() {
-    return _items
-        .map((e) => "${e.sets.length} × ${e.name}")
-        .take(3)
-        .join(" • ");
+    return _items.map((e) => "${e.sets.length} × ${e.name}").take(3).join(" • ");
   }
 
   List<String> _collectMuscles() {
-    final muscles = <String>{}; // use Set to avoid duplicates
-
+    final muscles = <String>{};
     for (final block in widget.template.exercises) {
       for (final m in block.muscles) {
         muscles.add(m);
       }
     }
-
     return muscles.toList();
   }
-
 
   @override
   void initState() {
     super.initState();
-    // Build editable workout from the template defaults
     _items = widget.template.exercises
-        .map(
-          (e) => WorkoutExercise(
-            name: e.name,
-            sets: List.generate(e.sets, (_) => WorkoutSet(reps: e.reps)),
-          ),
-        )
+        .map((e) => WorkoutExercise(
+              name: e.name,
+              sets: List.generate(e.sets, (_) => WorkoutSet(reps: e.reps)),
+            ))
         .toList();
 
     _stopwatch = Stopwatch()..start();
@@ -127,25 +117,13 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
         title: const Text('Workout'),
         actions: [
           IconButton(
-            tooltip: _stopwatch.isRunning ? 'Pause timer' : 'Start timer',
             icon: Icon(_stopwatch.isRunning ? Icons.pause : Icons.play_arrow),
-            onPressed: () {
-              setState(() {
-                if (_stopwatch.isRunning) {
-                  _stopwatch.stop();
-                } else {
-                  _stopwatch.start();
-                }
-              });
-            },
+            onPressed: () => setState(() => _stopwatch.isRunning ? _stopwatch.stop() : _stopwatch.start()),
           ),
           Center(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text(
-                elapsed,
-                style: const TextStyle(fontFeatures: [FontFeature.tabularFigures()]),
-              ),
+              child: Text(elapsed, style: const TextStyle(fontFeatures: [FontFeature.tabularFigures()])),
             ),
           ),
         ],
@@ -162,91 +140,43 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          ex.name,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
+                  Text(ex.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const Divider(),
+                  ...ex.sets.asMap().entries.map((entry) {
+                    int i = entry.key;
+                    var set = entry.value;
+                    return Row(
+                      children: [
+                        SizedBox(width: 30, child: Text('${i + 1}')),
+                        Expanded(
+                          child: TextFormField(
+                            initialValue: set.kg?.toString() ?? '',
+                            decoration: const InputDecoration(hintText: 'kg'),
+                            keyboardType: TextInputType.number,
+                            onChanged: (v) => set.kg = double.tryParse(v),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: const [
-                      SizedBox(width: 45, child: Text('#', textAlign: TextAlign.center)),
-                      SizedBox(width: 100, child: Text('KG', textAlign: TextAlign.center)),
-                      SizedBox(width: 100, child: Text('Reps', textAlign: TextAlign.center)),
-                      SizedBox(width: 100, child: Text('Done', textAlign: TextAlign.center)),
-                    ],
-                  ),
-                  const Divider(height: 12),
-                  ...List.generate(ex.sets.length, (i) {
-                    final set = ex.sets[i];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 45,
-                            child: Text('${i + 1}', textAlign: TextAlign.center),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextFormField(
+                            initialValue: set.reps?.toString() ?? '',
+                            decoration: const InputDecoration(hintText: 'reps'),
+                            keyboardType: TextInputType.number,
+                            onChanged: (v) => set.reps = int.tryParse(v),
                           ),
-                          SizedBox(
-                            width: 100,
-                            child: TextFormField(
-                              initialValue: set.kg?.toString() ?? '',
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              textAlign: TextAlign.center,
-                              decoration: const InputDecoration(hintText: 'kg'),
-                              onChanged: (v) => set.kg = double.tryParse(v.replaceAll(',', '.')),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          SizedBox(
-                            width: 100,
-                            child: TextFormField(
-                              initialValue: set.reps?.toString() ?? '',
-                              keyboardType: TextInputType.number,
-                              textAlign: TextAlign.center,
-                              decoration: const InputDecoration(hintText: 'reps'),
-                              onChanged: (v) => set.reps = int.tryParse(v),
-                            ),
-                          ),
-                          const SizedBox(width: 20),
-                          IconButton(
-                            tooltip: 'Mark done',
-                            onPressed: () => setState(() => set.done = !set.done),
-                            icon: Icon(
-                              set.done ? Icons.check_circle : Icons.radio_button_unchecked,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                        IconButton(
+                          icon: Icon(set.done ? Icons.check_circle : Icons.radio_button_unchecked),
+                          onPressed: () => setState(() => set.done = !set.done),
+                        )
+                      ],
                     );
-                  }),
-
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      TextButton.icon
-                        (onPressed: () => setState(() => ex.sets.add(WorkoutSet())),
-                        icon:const Icon(Icons.add),
-                        label: const Text("Add set")
-                        ),
-                      TextButton.icon(
-                        onPressed: () => setState(() {
-                          if (ex.sets.isNotEmpty) ex.sets.removeLast();
-                        }),
-                        icon: const Icon(Icons.remove),
-                        label: const Text("Remove set")
-                      )
-                    ],
-                  )
+                  }).toList(),
+                  TextButton.icon(
+                    onPressed: () => setState(() => ex.sets.add(WorkoutSet())),
+                    icon: const Icon(Icons.add),
+                    label: const Text("Add Set"),
+                  ),
                 ],
               ),
             ),
@@ -254,35 +184,28 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final totalKg = _calculateTotalKg();
-          final bestSet = _findBestSet();
-          final setsDesc = _shortSummary();
-          final duration = _stopwatch.elapsed.inSeconds;
-
-          final muscles = _collectMuscles();
-
+        onPressed: () {
           final log = WorkoutLog(
-              title: widget.template.name,
-              when: DateTime.now(),
-              durationSec: duration,
-              totalKg: totalKg,
-              bestSet: bestSet,
-              setsDesc: setsDesc,
-              muscles: muscles,
-              uid: '',
-            );
+            title: widget.template.name,
+            when: DateTime.now(),
+            durationSec: _stopwatch.elapsed.inSeconds,
+            totalKg: _calculateTotalKg(),
+            bestSet: _findBestSet(),
+            setsDesc: _shortSummary(),
+            muscles: _collectMuscles(),
+            uid: '',
+          );
 
-          await ref.read(workoutControllerProvider).addLog(log);
-          if (!mounted) return;
+          context.read<WorkoutBloc>().add(AddWorkoutLog(log));
+
           Navigator.of(context).pop();
-
-          ScaffoldMessenger.of(context)
-              .showSnackBar(const SnackBar(content: Text("Workout saved!")));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Workout saved!")),
+          );
         },
         icon: const Icon(Icons.save),
         label: const Text('Save'),
-      )
+      ),
     );
   }
 }

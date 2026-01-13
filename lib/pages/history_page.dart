@@ -1,87 +1,98 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../misc/workout/workout_log.dart';
 import '../misc/history_card.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../misc/workout/workout_providers.dart';
+import '../misc/workout/workout_bloc.dart';
+import '../misc/workout/workout_state.dart';
 
-class HistoryPage extends ConsumerWidget {
+class HistoryPage extends StatelessWidget {
   const HistoryPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final workoutsAsync = ref.watch(workoutLogsProvider);
-
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('History')),
-
-      body: workoutsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text("Error loading history: $err")),
-        data: (workouts) {
-          
-          if (workouts.isEmpty) {
-            return const Center(child: Text("No workouts yet."));
+      body: BlocBuilder<WorkoutBloc, WorkoutState>(
+        builder: (context, state) {
+          if (state is WorkoutLoading) {
+            return const Center(child: CircularProgressIndicator());
           }
 
-          final grouped = _groupByMonth(workouts);
-          final longestStreak = _longestStreak(workouts.map((w) => w.when).toList());
+          if (state is WorkoutError) {
+            return Center(child: Text("Error loading history: ${state.message}"));
+          }
 
-          return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-            itemCount: grouped.length + 1,
-            itemBuilder: (context, i) {
-              if (i == 0) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _StreakBanner(longestStreakDays: longestStreak),
-                );
-              }
+          if (state is WorkoutLoaded) {
+            final workouts = state.logs;
 
-              final group = grouped[i - 1];
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8, top: 8),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            group.label,
-                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+            if (workouts.isEmpty) {
+              return const Center(child: Text("No workouts yet."));
+            }
+
+            final grouped = _groupByMonth(workouts);
+            final longestStreak = _longestStreak(workouts.map((w) => w.when).toList());
+
+            return ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              itemCount: grouped.length + 1,
+              itemBuilder: (context, i) {
+                if (i == 0) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _StreakBanner(longestStreakDays: longestStreak),
+                  );
+                }
+
+                final group = grouped[i - 1];
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8, top: 8),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              group.label,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w700, fontSize: 16),
+                            ),
                           ),
-                        ),
-                        Text(
-                          '${group.items.length} workout${group.items.length == 1 ? '' : 's'}',
-                          style: TextStyle(
-                            color: Theme.of(context).textTheme.bodySmall?.color,
+                          Text(
+                            '${group.items.length} workout${group.items.length == 1 ? '' : 's'}',
+                            style: TextStyle(
+                              color: Theme.of(context).textTheme.bodySmall?.color,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
 
-                  // Workout Cards
-                  for (final w in group.items) ...[
-                    HistoryCard(w: w),
-                    const SizedBox(height: 12),
+                    // Workout Cards
+                    for (final w in group.items) ...[
+                      HistoryCard(w: w),
+                      const SizedBox(height: 12),
+                    ],
                   ],
-                ],
-              );
-            },
-          );
+                );
+              },
+            );
+          }
+
+          return const SizedBox.shrink();
         },
       ),
     );
   }
 
+
   List<MonthGroup> _groupByMonth(List<WorkoutLog> items) {
-    // sort logic is redundant because provider does it, but kept for safety
-    items = List.of(items)..sort((a, b) => b.when.compareTo(a.when));
+    final sortedItems = List<WorkoutLog>.from(items)
+      ..sort((a, b) => b.when.compareTo(a.when));
 
     final map = <String, List<WorkoutLog>>{};
 
-    for (final w in items) {
+    for (final w in sortedItems) {
       final key = '${_monthName(w.when.month)} ${w.when.year}';
       (map[key] ??= []).add(w);
     }
@@ -94,9 +105,10 @@ class HistoryPage extends ConsumerWidget {
   }
 
   String _monthName(int m) => const [
-        'January','February','March','April','May','June',
-        'July','August','September','October','November','December'
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
       ][m - 1];
+
   int _longestStreak(List<DateTime> dates) {
     if (dates.isEmpty) return 0;
 

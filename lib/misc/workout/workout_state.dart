@@ -1,30 +1,32 @@
+import 'package:equatable/equatable.dart';
 import 'workout_log.dart';
 
-class WorkoutState {
+abstract class WorkoutState extends Equatable {
+  const WorkoutState();
+  @override
+  List<Object?> get props => [];
+}
+
+class WorkoutInitial extends WorkoutState {}
+
+class WorkoutLoading extends WorkoutState {}
+
+class WorkoutLoaded extends WorkoutState {
   final List<WorkoutLog> logs;
   final Map<DateTime, Map<String, int>> muscleWorkByDay;
   final Map<String, int> totalMuscleVolume;
-  final bool isLoading;
 
-  WorkoutState({
-    this.logs = const [],
-    this.muscleWorkByDay = const {},
-    this.totalMuscleVolume = const {},
-    this.isLoading = true, // Default to true so UI shows a loader initially
+  const WorkoutLoaded({
+    required this.logs,
+    required this.muscleWorkByDay,
+    required this.totalMuscleVolume,
   });
 
-  // This is crucial for updating the state without losing other values
-  WorkoutState copyWith({
-    List<WorkoutLog>? logs,
-    Map<DateTime, Map<String, int>>? muscleWorkByDay,
-    Map<String, int>? totalMuscleVolume,
-    bool? isLoading,
-  }) {
-    return WorkoutState(
-      logs: logs ?? this.logs,
-      muscleWorkByDay: muscleWorkByDay ?? this.muscleWorkByDay,
-      totalMuscleVolume: totalMuscleVolume ?? this.totalMuscleVolume,
-      isLoading: isLoading ?? this.isLoading,
-    );
-  }
+  @override
+  List<Object?> get props => [logs, muscleWorkByDay, totalMuscleVolume];
+}
+
+class WorkoutError extends WorkoutState {
+  final String message;
+  const WorkoutError(this.message);
 }

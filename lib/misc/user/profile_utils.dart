@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'user_profile.dart';
-import 'profile_providers.dart';
+import 'profile_bloc.dart';
+import 'profile_event.dart';
 
+/// Opens a dialog to edit basic profile information
 Future<void> openEditProfileDialog(
-    BuildContext context, WidgetRef ref, UserProfile currentProfile) async {
+    BuildContext context, UserProfile currentProfile) async {
   final nameCtrl = TextEditingController(text: currentProfile.name);
   final heightCtrl = TextEditingController(text: currentProfile.heightCm.toString());
   final weightCtrl = TextEditingController(text: currentProfile.weightKg.toString());
@@ -36,8 +38,7 @@ Future<void> openEditProfileDialog(
               const SizedBox(height: 12),
               TextField(
                 controller: weightCtrl,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(labelText: 'Weight (kg)'),
               ),
             ],
@@ -49,36 +50,28 @@ Future<void> openEditProfileDialog(
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () async {
+            onPressed: () {
               final name = nameCtrl.text.trim();
               if (name.isEmpty) {
-                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
+                ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Name cannot be empty')),
                 );
                 return;
               }
 
-              final height = int.tryParse(heightCtrl.text.trim()) ?? currentProfile.heightCm;
-              final weight = double.tryParse(weightCtrl.text.trim()) ?? currentProfile.weightKg;
-              
               final newProfile = currentProfile.copyWith(
                 name: name,
-                heightCm: height,
-                weightKg: weight,
+                heightCm: int.tryParse(heightCtrl.text.trim()) ?? currentProfile.heightCm,
+                weightKg: double.tryParse(weightCtrl.text.trim()) ?? currentProfile.weightKg,
               );
 
-              try {
-                await ref.read(profileControllerProvider).updateProfile(newProfile);
+              // Dispatch to BLoC
+              context.read<ProfileBloc>().add(UpdateProfileEvent(newProfile));
 
-                if (context.mounted) Navigator.pop(ctx);
-                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Profile updated (Syncing...)')),
-                );
-              } on Exception catch (e) {
-                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Failed to update profile: $e')),
-                );
-              }
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Profile updated')),
+              );
             },
             child: const Text('Save'),
           ),
@@ -88,9 +81,9 @@ Future<void> openEditProfileDialog(
   );
 }
 
+/// Opens a dialog to update the target goal weight
 Future<void> editGoalWeightDialog(
   BuildContext context,
-  WidgetRef ref,
   UserProfile currentProfile,
 ) async {
   final controller = TextEditingController(
@@ -104,11 +97,8 @@ Future<void> editGoalWeightDialog(
         title: const Text('Set goal weight'),
         content: TextField(
           controller: controller,
-          keyboardType:
-              const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            labelText: 'Goal weight (kg)',
-          ),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(labelText: 'Goal weight (kg)'),
         ),
         actions: [
           TextButton(
@@ -116,31 +106,20 @@ Future<void> editGoalWeightDialog(
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () async {
+            onPressed: () {
               final value = double.tryParse(controller.text.trim());
               if (value == null) {
-                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Enter a valid number for goal weight')),
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Enter a valid number')),
                 );
                 return;
               }
               
-              final newProfile = currentProfile.copyWith(
-                goalWeightKg: value,
-              );
+              final newProfile = currentProfile.copyWith(goalWeightKg: value);
 
-              try {
-                await ref.read(profileControllerProvider).updateProfile(newProfile);
+              context.read<ProfileBloc>().add(UpdateProfileEvent(newProfile));
 
-                if (context.mounted) Navigator.pop(ctx);
-                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Goal weight updated (Syncing...)')),
-                );
-              } on Exception catch (e) {
-                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Failed to update goal weight: $e')),
-                );
-              }
+              Navigator.pop(ctx);
             },
             child: const Text('Save'),
           ),
@@ -150,16 +129,11 @@ Future<void> editGoalWeightDialog(
   );
 }
 
-
-// daily entry dialog
+/// Logic for daily weight/calorie tracking
 Future<void> addDailyEntryDialog(
   BuildContext context,
-  WidgetRef ref,
   double currentWeight,
 ) async {
-  // it currently still uses direct Firebase calls as the DailyLog
-  // model and providers not implemented yet
-
   final weightCtrl = TextEditingController(
     text: currentWeight > 0 ? currentWeight.toString() : '',
   );
@@ -176,47 +150,39 @@ Future<void> addDailyEntryDialog(
             children: [
               TextField(
                 controller: weightCtrl,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: 'Weight (kg)',
-                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'Weight (kg)'),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: caloriesCtrl,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Calories (kcal)',
-                ),
+                decoration: const InputDecoration(labelText: 'Calories (kcal)'),
               ),
             ],
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           FilledButton(
             onPressed: () async {
               final weightVal = double.tryParse(weightCtrl.text.trim());
               final caloriesVal = int.tryParse(caloriesCtrl.text.trim());
 
               if (weightVal == null || caloriesVal == null) {
-                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Enter valid weight and calories')),
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Enter valid inputs')),
                 );
                 return;
               }
 
-              final uid = FirebaseAuth.instance.currentUser!.uid;
+              final uid = FirebaseAuth.instance.currentUser?.uid;
+              if (uid == null) return;
+
               final now = DateTime.now();
-              final dateKey =
-                  '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+              final dateKey = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
 
               try {
-                // should be replaced by DailyLogNotifier.add(log) later 
                 await FirebaseFirestore.instance
                     .collection('users')
                     .doc(uid)
@@ -229,13 +195,12 @@ Future<void> addDailyEntryDialog(
                 }, SetOptions(merge: true));
 
                 if (context.mounted) Navigator.pop(ctx);
-                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Entry saved')),
-                );
-              } on FirebaseException catch (e) {
-                 if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(e.message ?? 'Failed to save entry')),
-                );
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
+                }
               }
             },
             child: const Text('Save'),
@@ -246,6 +211,7 @@ Future<void> addDailyEntryDialog(
   );
 }
 
+/// Helper to handle user password changes
 void changePasswordDialog(BuildContext context) {
   final oldPass = TextEditingController();
   final newPass = TextEditingController();
@@ -253,28 +219,24 @@ void changePasswordDialog(BuildContext context) {
 
   showDialog(
     context: context,
-    builder: (context) {
+    builder: (ctx) {
       return AlertDialog(
         title: const Text("Change Password"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(controller: oldPass, obscureText: true, decoration: const InputDecoration(labelText: "Current password")),
-            const SizedBox(height: 12),
             TextField(controller: newPass, obscureText: true, decoration: const InputDecoration(labelText: "New password")),
-            const SizedBox(height: 12),
-            TextField(controller: confirmPass, obscureText: true, decoration: const InputDecoration(labelText: "Confirm new password")),
+            TextField(controller: confirmPass, obscureText: true, decoration: const InputDecoration(labelText: "Confirm password")),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
           FilledButton(
             onPressed: () async {
               final user = FirebaseAuth.instance.currentUser;
               if (newPass.text.trim() != confirmPass.text.trim()) {
-                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("New passwords do not match")),
-                );
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Passwords mismatch")));
                 return;
               }
 
@@ -282,15 +244,9 @@ void changePasswordDialog(BuildContext context) {
                 final cred = EmailAuthProvider.credential(email: user!.email!, password: oldPass.text.trim());
                 await user.reauthenticateWithCredential(cred);
                 await user.updatePassword(newPass.text.trim());
-
-                if (context.mounted) Navigator.pop(context);
-                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Password updated successfully")),
-                );
-              } on FirebaseAuthException catch (e) {
-                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(e.message ?? "Error updating password")),
-                );
+                if (context.mounted) Navigator.pop(ctx);
+              } catch (e) {
+                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
               }
             },
             child: const Text("Update"),
@@ -301,23 +257,24 @@ void changePasswordDialog(BuildContext context) {
   );
 }
 
-
+/// Completely removes the user account and data
 Future<void> deleteAccount(BuildContext context) async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) return;
 
   final passwordController = TextEditingController();
   final email = user.email!;
+  
   final reauth = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text("Confirm identity"),
+      title: const Text("Delete Account?"),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text("Enter your password to delete your account ($email)"),
+          const Text("This action is permanent. Enter password to confirm:"),
           const SizedBox(height: 12),
-          TextField(controller: passwordController, obscureText: true, decoration: const InputDecoration(labelText: "Password", border: OutlineInputBorder())),
+          TextField(controller: passwordController, obscureText: true, decoration: const InputDecoration(border: OutlineInputBorder())),
         ],
       ),
       actions: [
@@ -325,7 +282,7 @@ Future<void> deleteAccount(BuildContext context) async {
         FilledButton(
           style: FilledButton.styleFrom(backgroundColor: Colors.red),
           onPressed: () => Navigator.pop(ctx, true),
-          child: const Text("Confirm"),
+          child: const Text("Delete Forever"),
         )
       ],
     ),
@@ -336,15 +293,15 @@ Future<void> deleteAccount(BuildContext context) async {
   try {
     final credential = EmailAuthProvider.credential(email: email, password: passwordController.text.trim());
     await user.reauthenticateWithCredential(credential);
+    
     final uid = user.uid;
     await FirebaseFirestore.instance.collection("users").doc(uid).delete();
     await user.delete();
+
     if (context.mounted) {
       Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
     }
-  } on FirebaseAuthException catch (e) {
-    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(e.message ?? "Failed to delete account")),
-    );
+  } catch (e) {
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
   }
 }

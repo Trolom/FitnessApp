@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'template_event.dart';
 import 'template_state.dart';
 import 'template_service.dart';
-import '../../content.dart'; // For baseTemplates
+import '../../content.dart';
 
 class TemplateBloc extends Bloc<TemplateEvent, TemplateState> {
   StreamSubscription? _subscription;
@@ -14,7 +14,6 @@ class TemplateBloc extends Bloc<TemplateEvent, TemplateState> {
     on<DeleteTemplateEvent>(_onDelete);
     on<SyncTemplatesUpdateEvent>(_onSyncUpdate);
 
-    // Start listening to the Firebase stream (replacing the StreamProvider)
     _subscription = TemplateService.streamTemplates().listen((list) {
       add(SyncTemplatesUpdateEvent(list));
     });
@@ -22,7 +21,6 @@ class TemplateBloc extends Bloc<TemplateEvent, TemplateState> {
 
   Future<void> _onLoadTemplates(LoadTemplatesEvent event, Emitter<TemplateState> emit) async {
     emit(state.copyWith(status: TemplateStatus.loading));
-    // Usually handled by the stream subscription, but we can initialize here if needed
   }
 
   Future<void> _onAdd(AddTemplateEvent event, Emitter<TemplateState> emit) async {

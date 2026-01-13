@@ -130,7 +130,6 @@ class _CreateTemplatePageState extends State<CreateTemplatePage> {
                   ),
 
                   Expanded(
-                    // 2. Replaced ref.watch with BlocBuilder
                     child: BlocBuilder<ExerciseBloc, ExerciseState>(
                       builder: (context, state) {
                         if (state.status == ExerciseStatus.loading) {

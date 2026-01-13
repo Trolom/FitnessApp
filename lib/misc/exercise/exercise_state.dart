@@ -3,8 +3,8 @@ import 'exercise.dart';
 enum ExerciseStatus { initial, loading, success, error }
 
 class ExerciseState {
-  final List<Exercise> customExercises; // Only user-created ones
-  final List<Exercise> allExercises;    // Combined Base + Custom
+  final List<Exercise> customExercises; 
+  final List<Exercise> allExercises;   
   final ExerciseStatus status;
   final String? errorMessage;
 
